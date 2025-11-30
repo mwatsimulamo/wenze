@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     nodePolyfills({
-      // Pour assurer que Buffer et d'autres globales Node.js sont dispo dans le navigateur
       globals: {
         Buffer: true,
         global: true,
@@ -15,26 +15,26 @@ export default defineConfig({
       },
     }),
   ],
-  // Configuration critique pour Lucid / Cardano
   esbuild: {
     target: "esnext",
   },
   build: {
     target: "esnext",
-    outDir: "dist", // Force le dossier de sortie standard
-    emptyOutDir: true, // Vide le dossier avant de construire
+    outDir: "dist",
+    emptyOutDir: true,
   },
   optimizeDeps: {
     esbuildOptions: {
       target: "esnext",
     },
-    exclude: ['lucid-cardano'] 
+    // On force l'optimisation pour convertir le CommonJS de Lucid en ESM propre
+    include: ['lucid-cardano'] 
   },
   resolve: {
     alias: {
-      // Hack pour corriger l'erreur "Could not load stream-browserify/web"
-      'stream-browserify/web': 'web-streams-polyfill', 
-      'node:stream/web': 'web-streams-polyfill',
+      // Redirection vers notre fichier local vide pour éviter l'erreur ENOENT
+      'stream-browserify/web': path.resolve(__dirname, 'src/shims/stream-web.ts'),
+      'node:stream/web': path.resolve(__dirname, 'src/shims/stream-web.ts'),
     },
   },
 })
