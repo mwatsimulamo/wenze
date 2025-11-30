@@ -1,6 +1,7 @@
-import { Lucid } from "@lucid-evolution/lucid";
+// Connexion directe aux wallets Cardano via l'API CIP-30 (sans librairie externe)
+// On garde la blockchain prête, mais légère pour le déploiement Web2/Web3 hybride.
 
-// Type definition for the window.cardano object injected by wallets
+// Type definition for the window.cardano object injected by wallets (Nami, Eternl, Flint, ...)
 declare global {
   interface Window {
     cardano?: any;
@@ -14,7 +15,8 @@ const SUPPORTED_WALLETS = ['nami', 'eternl', 'flint', 'vespr', 'lace', 'yoroi'];
 
 /**
  * Connecte l'utilisateur à son portefeuille Cardano via l'extension navigateur.
- * Version universelle : détecte n'importe quel wallet CIP-30 compatible.
+ * Version universelle : détecte n'importe quel wallet CIP-30 compatible,
+ * sans dépendre de grosses librairies blockchain (compatibilité Vercel).
  */
 export const connectWallet = async (): Promise<string | null> => {
   console.log("🔗 Initialisation de la connexion Blockchain WENZE...");
@@ -25,11 +27,8 @@ export const connectWallet = async (): Promise<string | null> => {
   }
 
   try {
-    // 1. Initialisation de Lucid
-    const lucid = await Lucid.new(undefined, "Mainnet");
-
-    // 2. Détection du wallet disponible
-    let selectedWalletApi = null;
+    // 1. Détection du wallet disponible
+    let selectedWalletApi: any = null;
     let walletName = "";
 
     // On cherche le premier wallet installé et activé parmi la liste
@@ -64,14 +63,19 @@ export const connectWallet = async (): Promise<string | null> => {
       return null;
     }
 
-    // 3. Configuration de Lucid avec le wallet connecté
-    lucid.selectWallet(selectedWalletApi);
+    // 3. Récupération d'une adresse depuis l'API CIP-30 directement
+    // Selon les wallets, getUsedAddresses() retourne des adresses encodées (hex).
+    // Pour le MVP, on affiche une version tronquée de l'adresse pour indiquer la connexion.
+    const used = await selectedWalletApi.getUsedAddresses?.();
+    const first = used && used.length > 0 ? used[0] : null;
 
-    // 4. Récupération de l'adresse
-    const address = await lucid.wallet.address();
-    console.log(`✅ Wallet WENZE Connecté (${walletName}):`, address);
+    const displayAddress = first
+      ? `${String(first).slice(0, 10)}...${String(first).slice(-6)}`
+      : walletName || null;
+
+    console.log(`✅ Wallet WENZE Connecté (${walletName}):`, displayAddress);
     
-    return address;
+    return displayAddress;
 
   } catch (error) {
     console.error("❌ Erreur critique de connexion Blockchain:", error);

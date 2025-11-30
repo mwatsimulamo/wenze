@@ -1,32 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-// https://vitejs.dev/config/
+// Configuration Vite simple et robuste pour une SPA React moderne.
 export default defineConfig({
-  plugins: [
-    react(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-    }),
-  ],
-  esbuild: {
-    target: "es2022",
-  },
+  plugins: [react()],
   build: {
-    target: "es2022",
-    outDir: "dist",
+    target: 'es2020',
+    outDir: 'dist',
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: "es2022",
-      supported: { 
-        bigint: true 
-      },
-    }
-  }
 })
