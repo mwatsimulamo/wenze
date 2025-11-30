@@ -11,7 +11,7 @@ L'objectif est de sécuriser les transactions via des Smart Contracts (Escrow).
 - `prepareAdaPayment.ts` : Logique de préparation de la transaction de verrouillage des fonds.
 - `prepareAdaRelease.ts` : Logique de libération des fonds une fois le produit reçu.
 
-### Prochaines Étapes
+### Prochaines Étapess
 1. **Définir le Smart Contract** : Rédiger le script de validation (Plutus pour Cardano ou Solidity pour EVM).
 2. **Intégration SDK** : Utiliser `lucid-cardano` ou `ethers.js` pour interagir avec le contrat.
 3. **État Global** : Connecter ces fonctions au `AuthContext` ou un nouveau `BlockchainContext`.
