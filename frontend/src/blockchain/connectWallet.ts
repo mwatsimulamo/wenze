@@ -1,0 +1,95 @@
+import { Lucid } from "lucid-cardano";
+
+// Type definition for the window.cardano object injected by wallets
+declare global {
+  interface Window {
+    cardano?: any;
+  }
+}
+
+/**
+ * Liste des wallets supportés à vérifier (Ordre de priorité)
+ */
+const SUPPORTED_WALLETS = ['nami', 'eternl', 'flint', 'vespr', 'lace', 'yoroi'];
+
+/**
+ * Connecte l'utilisateur à son portefeuille Cardano via l'extension navigateur.
+ * Version universelle : détecte n'importe quel wallet CIP-30 compatible.
+ */
+export const connectWallet = async (): Promise<string | null> => {
+  console.log("🔗 Initialisation de la connexion Blockchain WENZE...");
+
+  if (!window.cardano) {
+    alert("Aucun portefeuille Crypto détecté. Installez Nami ou Eternl pour continuer.");
+    return null;
+  }
+
+  try {
+    // 1. Initialisation de Lucid
+    const lucid = await Lucid.new(undefined, "Mainnet");
+
+    // 2. Détection du wallet disponible
+    let selectedWalletApi = null;
+    let walletName = "";
+
+    // On cherche le premier wallet installé et activé parmi la liste
+    for (const name of SUPPORTED_WALLETS) {
+      if (window.cardano[name]) {
+        try {
+          console.log(`🔌 Tentative de connexion à ${name}...`);
+          // Demande l'autorisation à l'utilisateur
+          selectedWalletApi = await window.cardano[name].enable();
+          walletName = name;
+          if (selectedWalletApi) break; // Connexion réussie !
+        } catch (e) {
+          console.warn(`L'utilisateur a refusé ou erreur avec ${name}`, e);
+          // On continue à chercher si l'utilisateur a un autre wallet
+        }
+      }
+    }
+
+    if (!selectedWalletApi) {
+      // Fallback générique : vérifier si window.cardano a une méthode enable directe (anciens standards)
+      if (typeof window.cardano.enable === 'function') {
+         try {
+            selectedWalletApi = await window.cardano.enable();
+         } catch(e) {
+            console.error("Echec fallback legacy", e);
+         }
+      }
+    }
+
+    if (!selectedWalletApi) {
+      alert("Impossible de se connecter. Veuillez déverrouiller votre portefeuille.");
+      return null;
+    }
+
+    // 3. Configuration de Lucid avec le wallet connecté
+    lucid.selectWallet(selectedWalletApi);
+
+    // 4. Récupération de l'adresse
+    const address = await lucid.wallet.address();
+    console.log(`✅ Wallet WENZE Connecté (${walletName}):`, address);
+    
+    return address;
+
+  } catch (error) {
+    console.error("❌ Erreur critique de connexion Blockchain:", error);
+    alert("Erreur technique lors de la connexion au portefeuille.");
+    return null;
+  }
+};
+
+/**
+ * Vérifie si un wallet est déjà connecté
+ */
+export const checkWalletConnection = async (): Promise<boolean> => {
+  if (!window.cardano) return false;
+
+  for (const name of SUPPORTED_WALLETS) {
+    if (window.cardano[name] && await window.cardano[name].isEnabled()) {
+      return true;
+    }
+  }
+  return false;
+};

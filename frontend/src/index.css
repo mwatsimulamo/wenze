@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply antialiased text-gray-900;
+}
+
+/* Empêche le zoom automatique sur les inputs sur iOS */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium active:scale-95 transform duration-150;
+  }
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition font-medium active:scale-95 transform duration-150;
+  }
+  .card {
+    @apply bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100;
+  }
+}
+
+
