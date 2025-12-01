@@ -59,7 +59,7 @@ Le frontend communique directement avec Supabase pour le CRUD. Le backend Node e
 4. **Livraison & Libération :**
    - Le vendeur voit la commande et clique sur "Confirmer l'expédition" (Statut : `shipped`).
    - L'acheteur reçoit, vérifie et clique sur "Confirmer la réception" (Statut : `completed`).
-   - Les fonds sont "libérés" (logique purement base de données) et des points UZP sont distribués.
+   - Les fonds sont "libérés" (logique purement base de données) et des points WZP sont distribués.
 5. **Chat :** Messagerie intégrée dans chaque commande.
 
 ## 📂 Structure des Dossiers Clés

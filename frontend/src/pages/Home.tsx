@@ -19,13 +19,10 @@ const Home = () => {
           WENZE réinvente l'échange à Goma. Achetez, Vendez, Echangez avec une garantie de sécurité totale grâce à la technologie Blockchain.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link to="/products" className="btn-primary text-lg px-10 py-4 rounded-full shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition flex items-center gap-2">
+        <div className="flex justify-center">
+          <Link to="/login" className="btn-primary text-lg px-10 py-4 rounded-full shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition flex items-center gap-2">
             <ShoppingBag size={20} />
             Commencer
-          </Link>
-          <Link to="/signup" className="px-10 py-4 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition border border-gray-200">
-            Devenir Vendeur
           </Link>
         </div>
       </div>
@@ -42,13 +39,13 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="card group hover:bg-uzp hover:text-white transition-all duration-300 border-none shadow-lg p-8 text-left rounded-3xl">
+        <div className="card group hover:bg-wzp hover:text-white transition-all duration-300 border-none shadow-lg p-8 text-left rounded-3xl">
           <div className="bg-orange-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-white/20 transition">
-            <TrendingUp className="text-uzp group-hover:text-white h-8 w-8" />
+            <TrendingUp className="text-wzp group-hover:text-white h-8 w-8" />
           </div>
           <h3 className="text-2xl font-bold mb-3">Gagnez +</h3>
           <p className="text-gray-500 group-hover:text-orange-100 leading-relaxed">
-            Chaque échange compte. Cumulez des points UZP et débloquez des avantages exclusifs à travers la ville.
+            Chaque échange compte. Cumulez des points WZP et débloquez des avantages exclusifs à travers la ville.
           </p>
         </div>
 

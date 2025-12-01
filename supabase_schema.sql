@@ -127,8 +127,8 @@ alter table ratings enable row level security;
 create policy "Ratings are public." on ratings for select using (true);
 create policy "Participants can rate completed orders." on ratings for insert with check (auth.uid() = rater_id);
 
--- 6. UZP TRANSACTIONS (Simulated Rewards)
-create table uzp_transactions (
+-- 6. WZP TRANSACTIONS (Simulated Rewards)
+create table wzp_transactions (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references profiles(id) not null,
   amount numeric not null,
@@ -137,8 +137,8 @@ create table uzp_transactions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table uzp_transactions enable row level security;
-create policy "Users can see own UZP history." on uzp_transactions
+alter table wzp_transactions enable row level security;
+create policy "Users can see own WZP history." on wzp_transactions
   for select using (auth.uid() = user_id);
 
 -- TRIGGER: Auto-create profile on signup

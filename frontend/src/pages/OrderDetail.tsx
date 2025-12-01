@@ -44,12 +44,12 @@ const OrderDetail = () => {
         if (newStatus === 'completed') {
             await prepareAdaRelease(id!);
             
-            // Simuler récompense UZP
-            await supabase.from('uzp_transactions').insert([
+            // Simuler récompense WZP
+            await supabase.from('wzp_transactions').insert([
                 { user_id: order.buyer_id, amount: 2.5, type: 'earn_buy' },
                 { user_id: order.seller_id, amount: 2.5, type: 'earn_sell' }
             ]);
-            alert("Commande terminée ! Fonds libérés et UZP distribués.");
+            alert("Commande terminée ! Fonds libérés et WZP distribués.");
         }
     }
   };
