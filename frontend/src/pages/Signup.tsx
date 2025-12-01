@@ -12,6 +12,34 @@ const GoogleIcon = () => (
   </svg>
 );
 
+// Fonction pour traduire les erreurs Supabase en français
+const translateError = (errorMessage: string): string => {
+  const errorTranslations: { [key: string]: string } = {
+    'User already registered': 'Un compte existe déjà avec cette adresse email. Veuillez vous connecter.',
+    'A user with this email address has already been registered': 'Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser une autre adresse.',
+    'Email rate limit exceeded': 'Trop de tentatives. Veuillez réessayer dans quelques minutes.',
+    'Password should be at least 6 characters': 'Le mot de passe doit contenir au moins 6 caractères.',
+    'Unable to validate email address: invalid format': 'Format d\'email invalide. Veuillez vérifier votre adresse.',
+    'Signup requires a valid password': 'Veuillez entrer un mot de passe valide.',
+    'To signup, please provide your email': 'Veuillez entrer votre adresse email.',
+  };
+
+  // Vérifier si le message contient une des clés connues
+  for (const [key, value] of Object.entries(errorTranslations)) {
+    if (errorMessage.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+
+  // Si l'erreur contient "already" et "email", c'est probablement un doublon
+  if (errorMessage.toLowerCase().includes('already') && errorMessage.toLowerCase().includes('email')) {
+    return 'Cette adresse email est déjà utilisée. Veuillez vous connecter.';
+  }
+
+  // Retourner le message original si pas de traduction
+  return errorMessage;
+};
+
 const Signup = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -20,20 +48,35 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'error' | 'warning'>('error');
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
+    // Vérification côté client
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères.');
+      setErrorType('error');
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } }
     });
 
     if (error) {
-      setError(error.message);
+      setError(translateError(error.message));
+      setErrorType('error');
+      setLoading(false);
+    } else if (data?.user?.identities?.length === 0) {
+      // Supabase retourne un user mais sans identities si l'email existe déjà
+      setError('Cette adresse email est déjà utilisée. Veuillez vous connecter.');
+      setErrorType('warning');
       setLoading(false);
     } else {
       alert('Inscription réussie ! Vérifiez votre email ou connectez-vous.');
@@ -139,8 +182,20 @@ const Signup = () => {
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm border border-red-100 animate-slide-up">
-                {error}
+              <div className={`p-4 rounded-xl mb-6 text-sm border animate-slide-up ${
+                errorType === 'warning' 
+                  ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                  : 'bg-red-50 text-red-600 border-red-100'
+              }`}>
+                <p className="font-medium mb-1">
+                  {errorType === 'warning' ? '⚠️ Attention' : '❌ Erreur'}
+                </p>
+                <p>{error}</p>
+                {errorType === 'warning' && (
+                  <Link to="/login" className="inline-block mt-2 text-primary font-semibold hover:underline">
+                    → Se connecter
+                  </Link>
+                )}
               </div>
             )}
 

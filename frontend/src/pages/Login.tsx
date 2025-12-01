@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Lock, Zap } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -51,187 +50,154 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding (Hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-wenze-dark via-primary to-blue-600">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-          {/* Logo */}
-          <div className="mb-8 animate-fade-in">
-            <img src="/logo.png" alt="Wenze" className="h-16 w-auto animate-float" />
-          </div>
-          
-          <h1 className="text-5xl font-bold mb-4 animate-slide-up">
-            Bienvenue sur <span className="text-wzp">Wenze</span>
-          </h1>
-          <p className="text-xl text-blue-100 mb-12 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            La marketplace de confiance pour l'Afrique de demain.
-          </p>
-
-          {/* Features */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-wzp" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Escrow Sécurisé</h3>
-                <p className="text-sm text-blue-200">Vos fonds sont protégés jusqu'à réception</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-              <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
-                <Lock className="w-6 h-6 text-wzp" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Transactions Vérifiées</h3>
-                <p className="text-sm text-blue-200">Chaque vendeur est authentifié</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-              <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
-                <Zap className="w-6 h-6 text-wzp" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Paiements Rapides</h3>
-                <p className="text-sm text-blue-200">Libération instantanée après confirmation</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Trust Badge */}
-          <div className="mt-12 pt-8 border-t border-white/20 animate-fade-in" style={{ animationDelay: '0.5s' }}>
-            <p className="text-sm text-blue-200">
-              🔒 Connexion sécurisée avec chiffrement SSL
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#0a0a0a]">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-950/40 via-transparent to-cyan-950/30" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/15 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-fuchsia-600/10 rounded-full blur-[150px]" />
       </div>
 
-      {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 bg-gray-50">
-        <div className="w-full max-w-md animate-fade-in">
-          {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <img src="/logo.png" alt="Wenze" className="h-12 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-dark">
-              Bienvenue sur <span className="text-primary">Wenze</span>
+      {/* Subtle grid pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '64px 64px'
+        }}
+      />
+
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-[420px] px-6">
+        {/* Logo */}
+        <div className="text-center mb-10 animate-fade-in">
+          <img 
+            src="/logo.png" 
+            alt="Wenze" 
+            className="h-12 mx-auto mb-6 drop-shadow-2xl"
+          />
+        </div>
+
+        {/* Form Card */}
+        <div 
+          className="backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 shadow-2xl animate-slide-up"
+          style={{ 
+            boxShadow: '0 0 80px -20px rgba(139, 92, 246, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.5)' 
+          }}
+        >
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold text-white tracking-tight">
+              Connexion
             </h1>
-          </div>
-
-          {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-dark">Connexion</h2>
-              <p className="text-gray-500 mt-2">Accédez à votre compte Wenze</p>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm border border-red-100 animate-slide-up">
-                {error}
-              </div>
-            )}
-
-            {/* Google Button */}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3.5 px-4 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <GoogleIcon />
-              {googleLoading ? 'Connexion en cours...' : 'Continuer avec Google'}
-            </button>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-white text-sm text-gray-400">ou avec votre email</span>
-              </div>
-            </div>
-
-            {/* Email Form */}
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Adresse email
-                </label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none text-base"
-                  placeholder="vous@exemple.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Mot de passe
-                  </label>
-                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-                <input
-                  type="password"
-                  required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none text-base"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Connexion...
-                  </span>
-                ) : (
-                  'Se connecter'
-                )}
-              </button>
-            </form>
-
-            {/* Sign Up Link */}
-            <p className="mt-8 text-center text-gray-600">
-              Pas encore de compte ?{' '}
-              <Link to="/signup" className="text-primary font-semibold hover:underline">
-                Créer un compte
-              </Link>
+            <p className="text-white/50 mt-2 text-sm">
+              Accédez à votre espace
             </p>
           </div>
 
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-gray-400">
-            En vous connectant, vous acceptez nos{' '}
-            <a href="#" className="underline hover:text-gray-600">Conditions d'utilisation</a>
-            {' '}et notre{' '}
-            <a href="#" className="underline hover:text-gray-600">Politique de confidentialité</a>
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm animate-slide-up">
+              {error}
+            </div>
+          )}
+
+          {/* Google Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-medium py-3 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+          >
+            <GoogleIcon />
+            {googleLoading ? 'Connexion...' : 'Continuer avec Google'}
+          </button>
+
+          {/* Divider */}
+          <div className="relative my-7">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-4 bg-transparent text-xs text-white/30 uppercase tracking-wider">ou</span>
+            </div>
+          </div>
+
+          {/* Email Form */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-2 uppercase tracking-wider">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                className="w-full px-4 py-3 bg-white/[0.05] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-200"
+                placeholder="vous@exemple.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-medium text-white/60 uppercase tracking-wider">
+                  Mot de passe
+                </label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                >
+                  Oublié ?
+                </Link>
+              </div>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 bg-white/[0.05] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-200"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-medium py-3 px-4 rounded-xl hover:from-violet-500 hover:to-fuchsia-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 hover:-translate-y-0.5"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Connexion...
+                </span>
+              ) : (
+                'Se connecter'
+              )}
+            </button>
+          </form>
+
+          {/* Sign Up Link */}
+          <p className="mt-8 text-center text-white/50 text-sm">
+            Pas de compte ?{' '}
+            <Link 
+              to="/signup" 
+              className="text-violet-400 font-medium hover:text-violet-300 transition-colors"
+            >
+              Créer un compte
+            </Link>
           </p>
         </div>
+
+        {/* Footer */}
+        <p className="mt-8 text-center text-xs text-white/25">
+          En continuant, vous acceptez nos{' '}
+          <a href="#" className="text-white/40 hover:text-white/60 transition-colors">Conditions</a>
+          {' '}et{' '}
+          <a href="#" className="text-white/40 hover:text-white/60 transition-colors">Confidentialité</a>
+        </p>
       </div>
     </div>
   );
