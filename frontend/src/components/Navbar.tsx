@@ -133,8 +133,8 @@ const Navbar = () => {
                         language === 'sw' ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-700 dark:text-gray-200'
                       }`}
                     >
-                      <span className="text-lg">🇹🇿</span>
-                      <span>Kiswahili</span>
+                      <span className="text-lg">🇨🇩</span>
+                      <span>Kiswahili (DRC)</span>
                     </button>
                   </div>
                 )}
@@ -359,7 +359,7 @@ const Navbar = () => {
                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
                    }`}
                  >
-                   🇹🇿 SW
+                   🇨🇩 SW
                  </button>
                </div>
              </div>
