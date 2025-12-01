@@ -27,7 +27,11 @@ const OrderDetail = () => {
       .eq('id', id)
       .single();
 
-    if (!error) setOrder(data);
+    if (!error) {
+      setOrder(data);
+    } else {
+      console.error('Error fetching order:', error);
+    }
     setLoading(false);
   };
 
@@ -93,12 +97,26 @@ const OrderDetail = () => {
                 </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg flex gap-4">
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg flex gap-4">
                 <img src={order.products.image_url} className="w-20 h-20 object-cover rounded bg-white" />
                 <div>
-                    <h3 className="font-bold">{order.products.title}</h3>
-                    <p className="text-primary font-bold">{order.amount_ada} ADA</p>
-                    <p className="text-xs text-gray-500 mt-1">Status: {order.status}</p>
+                    <h3 className="font-bold text-dark dark:text-white">{order.products.title}</h3>
+                    <p className="text-primary font-bold">
+                        {order.final_price || order.amount_ada} ADA
+                        {order.order_mode === 'negotiation' && order.proposed_price && (
+                            <span className="text-xs text-gray-500 ml-2">
+                                (Proposé: {order.proposed_price} ADA)
+                            </span>
+                        )}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Status: {order.status}
+                        {order.order_mode === 'negotiation' && (
+                            <span className="ml-2 text-orange-600 dark:text-orange-400">
+                                • Négociation
+                            </span>
+                        )}
+                    </p>
                 </div>
             </div>
 
@@ -141,7 +159,7 @@ const OrderDetail = () => {
 
       {/* Colonne Droite: Chat */}
       <div className="lg:col-span-1">
-        <ChatBox orderId={id!} />
+        <ChatBox orderId={id!} order={order} />
         
         <div className="mt-6 card bg-gray-50">
             <h3 className="font-bold text-sm text-gray-500 uppercase mb-3">Détails techniques (Simulés)</h3>

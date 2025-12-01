@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Link } from 'react-router-dom';
 import { 
   Package, 
@@ -15,6 +16,7 @@ import {
 
 const Orders = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'buyer' | 'seller'>('all');
@@ -119,8 +121,8 @@ const Orders = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-dark">Mes Commandes</h1>
-          <p className="text-gray-500 mt-1">{orders.length} commande{orders.length !== 1 ? 's' : ''} au total</p>
+          <h1 className="text-3xl font-bold text-dark dark:text-white">{t('orders.title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">{orders.length} {t('orders.title') === 'Mes Commandes' ? `commande${orders.length !== 1 ? 's' : ''} au total` : `agizo${orders.length !== 1 ? 's' : ''} jumla`}</p>
         </div>
 
         {/* Filter Tabs */}
@@ -131,23 +133,23 @@ const Orders = () => {
               filter === 'all' ? 'bg-white shadow text-dark' : 'text-gray-500 hover:text-dark'
             }`}
           >
-            Toutes
+            {t('orders.title') === 'Mes Commandes' ? 'Toutes' : 'Zote'}
           </button>
           <button
             onClick={() => setFilter('buyer')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              filter === 'buyer' ? 'bg-white shadow text-dark' : 'text-gray-500 hover:text-dark'
+              filter === 'buyer' ? 'bg-white dark:bg-gray-800 shadow text-dark dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white'
             }`}
           >
-            Achats
+            {t('orders.title') === 'Mes Commandes' ? 'Achats' : 'Kununua'}
           </button>
           <button
             onClick={() => setFilter('seller')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              filter === 'seller' ? 'bg-white shadow text-dark' : 'text-gray-500 hover:text-dark'
+              filter === 'seller' ? 'bg-white dark:bg-gray-800 shadow text-dark dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white'
             }`}
           >
-            Ventes
+            {t('orders.title') === 'Mes Commandes' ? 'Ventes' : 'Kuuzwa'}
           </button>
         </div>
       </div>
@@ -162,20 +164,20 @@ const Orders = () => {
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShoppingBag className="w-10 h-10 text-gray-300" />
           </div>
-          <h3 className="text-xl font-bold text-dark mb-2">Aucune commande</h3>
-          <p className="text-gray-500 mb-6">
+          <h3 className="text-xl font-bold text-dark dark:text-white mb-2">{t('orders.empty')}</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             {filter === 'buyer' 
-              ? "Vous n'avez pas encore effectué d'achat."
+              ? (t('orders.title') === 'Mes Commandes' ? "Vous n'avez pas encore effectué d'achat." : "Hujanunua chochote bado.")
               : filter === 'seller'
-              ? "Vous n'avez pas encore reçu de commande."
-              : "Vous n'avez aucune commande pour le moment."
+              ? (t('orders.title') === 'Mes Commandes' ? "Vous n'avez pas encore reçu de commande." : "Hujapokea agizo lolote bado.")
+              : t('orders.empty')
             }
           </p>
           <Link 
             to="/products" 
             className="inline-flex items-center gap-2 btn-primary"
           >
-            Explorer le marché
+            {t('products.title')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

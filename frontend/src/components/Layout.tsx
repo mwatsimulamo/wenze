@@ -3,12 +3,12 @@ import Navbar from './Navbar';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 flex flex-col transition-colors">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         {children}
       </main>
-      <footer className="bg-slate-900 text-gray-400 py-12 mt-auto">
+      <footer className="bg-slate-900 dark:bg-gray-950 text-gray-400 py-12 mt-auto">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">

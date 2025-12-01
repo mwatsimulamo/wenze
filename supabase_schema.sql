@@ -67,6 +67,11 @@ create table orders (
   -- 'completed' (buyer received -> funds released)
   -- 'disputed' (issue reported)
   escrow_hash text, -- Placeholder for database-side simulated hash
+  -- Négociation de prix (Web2 MVP)
+  order_mode text default 'direct', -- 'direct' ou 'negotiation'
+  proposed_price numeric, -- Montant proposé et bloqué par l'acheteur
+  final_price numeric, -- Prix final accepté par les deux parties
+  escrow_status text, -- 'open' | 'cancelled' | 'released' (pour le mode négociation)
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );

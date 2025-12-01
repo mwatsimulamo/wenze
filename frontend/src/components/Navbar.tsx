@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { Menu, X, User as UserIcon, Wallet, LogOut, ChevronDown, Copy, Check, Settings, LayoutDashboard, ArrowLeftRight, Camera, Package } from 'lucide-react';
+import { Menu, X, User as UserIcon, Wallet, LogOut, ChevronDown, Copy, Check, Settings, LayoutDashboard, ArrowLeftRight, Camera, Package, Sun, Moon, Languages } from 'lucide-react';
 import WalletModal, { WalletData } from './WalletModal';
 
 interface Profile {
@@ -12,7 +14,10 @@ interface Profile {
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<WalletData | null>(null);
@@ -91,8 +96,63 @@ const Navbar = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-6">
-              <Link to="/products" className="font-medium hover:text-accent transition">Marché</Link>
-              {user && <Link to="/orders" className="font-medium hover:text-accent transition">Commandes</Link>}
+              <Link to="/products" className="font-medium hover:text-accent transition">{t('nav.market')}</Link>
+              {user && <Link to="/orders" className="font-medium hover:text-accent transition">{t('nav.orders')}</Link>}
+              
+              {/* Language Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLangDropdown(!showLangDropdown)}
+                  className="p-2 hover:bg-white/10 rounded-full transition flex items-center gap-1"
+                  title="Changer la langue"
+                  aria-label="Language selector"
+                >
+                  <Languages className="w-5 h-5" />
+                  <span className="text-xs font-bold">{language.toUpperCase()}</span>
+                </button>
+                {showLangDropdown && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        setLanguage('fr');
+                        setShowLangDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2 ${
+                        language === 'fr' ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      <span className="text-lg">🇫🇷</span>
+                      <span>Français</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLanguage('sw');
+                        setShowLangDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2 ${
+                        language === 'sw' ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      <span className="text-lg">🇹🇿</span>
+                      <span>Kiswahili</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Dark/Light Mode Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 hover:bg-white/10 rounded-full transition"
+                title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
               
               {user ? (
                 <div className="flex items-center space-x-3 ml-4">
@@ -220,29 +280,29 @@ const Navbar = () => {
                             className="flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-gray-50 rounded-lg transition"
                           >
                             <LayoutDashboard className="w-5 h-5 text-gray-400" />
-                            <span className="font-medium">Tableau de bord</span>
+                            <span className="font-medium">{t('nav.dashboard')}</span>
                           </Link>
                           <Link
                             to="/profile"
                             onClick={() => setShowProfileDropdown(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+                            className="flex items-center gap-3 px-3 py-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition"
                           >
                             <Settings className="w-5 h-5 text-gray-400" />
-                            <span className="font-medium">Modifier le profil</span>
+                            <span className="font-medium">{t('nav.profile')}</span>
                           </Link>
                         </div>
 
                         {/* Logout */}
-                        <div className="border-t border-gray-100 p-2">
+                        <div className="border-t border-gray-100 dark:border-gray-700 p-2">
                           <button
                             onClick={() => {
                               setShowProfileDropdown(false);
                               handleSignOut();
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                           >
                             <LogOut className="w-5 h-5" />
-                            <span className="font-medium">Se déconnecter</span>
+                            <span className="font-medium">{t('nav.logout')}</span>
                           </button>
                         </div>
                       </div>
@@ -251,9 +311,9 @@ const Navbar = () => {
                 </div>
               ) : (
                 <div className="flex items-center space-x-4">
-                  <Link to="/login" className="font-medium hover:text-accent">Connexion</Link>
+                  <Link to="/login" className="font-medium hover:text-accent">{t('nav.login')}</Link>
                   <Link to="/signup" className="bg-white text-primary font-bold px-5 py-2 rounded-full hover:bg-gray-100 transition shadow-md">
-                    Rejoindre
+                    {t('nav.join')}
                   </Link>
                 </div>
               )}
@@ -270,38 +330,87 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white text-gray-800 px-4 pt-4 pb-6 space-y-3 shadow-xl border-t border-gray-100 absolute w-full left-0">
+          <div className="md:hidden bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-4 pt-4 pb-6 space-y-3 shadow-xl border-t border-gray-100 dark:border-gray-800 absolute w-full left-0">
+             {/* Language Selector Mobile */}
+             <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+               <span className="font-medium text-lg">Lugha / Langue</span>
+               <div className="flex items-center gap-2">
+                 <button
+                   onClick={() => {
+                     setLanguage('fr');
+                     setIsMenuOpen(false);
+                   }}
+                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                     language === 'fr' 
+                       ? 'bg-primary text-white' 
+                       : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                   }`}
+                 >
+                   🇫🇷 FR
+                 </button>
+                 <button
+                   onClick={() => {
+                     setLanguage('sw');
+                     setIsMenuOpen(false);
+                   }}
+                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                     language === 'sw' 
+                       ? 'bg-primary text-white' 
+                       : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                   }`}
+                 >
+                   🇹🇿 SW
+                 </button>
+               </div>
+             </div>
+
+             {/* Dark Mode Toggle Mobile */}
+             <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+               <span className="font-medium text-lg">Thème</span>
+               <button
+                 onClick={toggleTheme}
+                 className="p-2 rounded-full bg-white dark:bg-gray-700 shadow-sm transition"
+                 aria-label="Toggle theme"
+               >
+                 {theme === 'dark' ? (
+                   <Sun className="w-5 h-5 text-yellow-500" />
+                 ) : (
+                   <Moon className="w-5 h-5 text-gray-600" />
+                 )}
+               </button>
+             </div>
+             
              <Link 
                to="/products" 
-               className="block px-4 py-3 rounded-lg hover:bg-gray-50 font-medium text-lg"
+               className="block px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-lg"
                onClick={() => setIsMenuOpen(false)}
              >
-               Marché
+               {t('nav.market')}
              </Link>
              {user && (
                <Link 
                  to="/orders" 
-                 className="block px-4 py-3 rounded-lg hover:bg-gray-50 font-medium text-lg"
+                 className="block px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-lg"
                  onClick={() => setIsMenuOpen(false)}
                >
-                 Commandes
+                 {t('nav.orders')}
                </Link>
              )}
              {!user && (
                <div className="grid grid-cols-2 gap-4 mt-4">
                   <Link 
                     to="/login" 
-                    className="block text-center py-3 rounded-lg border border-gray-200 font-medium text-primary hover:bg-gray-50"
+                    className="block text-center py-3 rounded-lg border border-gray-200 dark:border-gray-700 font-medium text-primary hover:bg-gray-50 dark:hover:bg-gray-800"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Connexion
+                    {t('nav.login')}
                   </Link>
                   <Link 
                     to="/signup" 
                     className="block text-center py-3 rounded-lg bg-primary text-white font-bold shadow-md hover:bg-blue-700"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    S'inscrire
+                    {t('nav.join')}
                   </Link>
                </div>
              )}
@@ -450,12 +559,13 @@ const Navbar = () => {
       />
 
       {/* Click outside to close dropdowns */}
-      {(showWalletDropdown || showProfileDropdown) && (
+      {(showWalletDropdown || showProfileDropdown || showLangDropdown) && (
         <div 
           className="fixed inset-0 z-30" 
           onClick={() => {
             setShowWalletDropdown(false);
             setShowProfileDropdown(false);
+            setShowLangDropdown(false);
           }}
         />
       )}

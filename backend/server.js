@@ -21,9 +21,9 @@ app.get('/', (req, res) => {
     res.json({ message: "Wenze API (MVP V1) is running 🚀" });
 });
 
-// Import Routes (Will be created next)
-// const productRoutes = require('./routes/products');
-// app.use('/api/products', productRoutes);
+// Import Routes
+const orderRoutes = require('./routes/orders');
+app.use('/api/orders', orderRoutes);
 
 // Error Handling
 app.use((err, req, res, next) => {
