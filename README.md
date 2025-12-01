@@ -1,4 +1,4 @@
-# Wenze / Uzisha Chain - MVP V1 (Web2)
+# Wenze / - MVP V1 (Web2)
 
 Bienvenue dans le MVP de **Wenze**, la marketplace Web2 qui prépare le terrain pour la blockchain Cardano.
 Ce projet simule un système d'Escrow sécurisé et utilise Supabase pour toute la gestion des données.
