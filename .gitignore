@@ -35,3 +35,10 @@ Thumbs.db
 .cache/
 .npm/
 .eslintcache
+
+# Documentation / Guides
+GUIDE_*.md
+SOLUTION_*.md
+RECAP_*.md
+RESUME_*.md
+MODIFICATIONS_*.md

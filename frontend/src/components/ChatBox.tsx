@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Check, X, DollarSign, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 // API_BASE_URL removed - no longer needed, all negotiation logic is in OrderDetail.tsx via Supabase
 
 interface Message {
@@ -32,13 +32,8 @@ const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [showPriceInput, setShowPriceInput] = useState(false);
-  const [priceInput, setPriceInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const isBuyer = order && user?.id === order.buyer_id;
-  const isSeller = order && user?.id === order.seller_id;
   const isNegotiation = order?.order_mode === 'negotiation';
   const isEscrowOpen = order?.escrow_status === 'open';
   const isOrderCompleted = order?.status === 'completed';
@@ -87,81 +82,7 @@ const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
     }
   };
 
-  const callAPI = async (endpoint: string, body?: any) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || ''
-        },
-        body: body ? JSON.stringify(body) : undefined
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        fetchMessages();
-        // Rafraîchir l'ordre (à gérer par le parent)
-        window.location.reload(); // Simple pour MVP
-      } else {
-        alert(data.error || 'Erreur');
-      }
-    } catch (error) {
-      alert('Erreur de connexion au serveur');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProposePrice = async () => {
-    const price = parseFloat(priceInput);
-    if (isNaN(price) || price <= 0) {
-      alert('Prix invalide');
-      return;
-    }
-    await callAPI('/propose-price', { proposed_price: price });
-    setShowPriceInput(false);
-    setPriceInput('');
-  };
-
-  const handleAcceptPrice = () => {
-    const msg = t('chat.negotiation.accept') === 'Accepter' 
-      ? 'Accepter ce prix et continuer la transaction ?'
-      : 'Kubali bei hii na kuendelea na biashara?';
-    if (confirm(msg)) {
-      callAPI('/accept-price');
-    }
-  };
-
-  const handleCounterOffer = async () => {
-    const price = parseFloat(priceInput);
-    if (isNaN(price) || price <= 0) {
-      alert('Prix invalide');
-      return;
-    }
-    await callAPI('/counter-offer', { counter_price: price });
-    setShowPriceInput(false);
-    setPriceInput('');
-  };
-
-  const handleCancelNegotiation = () => {
-    const msg = t('chat.negotiation.cancel') === 'Annuler la négociation'
-      ? 'Annuler la négociation ? Les fonds bloqués seront libérés.'
-      : 'Ghairi mazungumzo? Fedha zilizowekwa zitafunguliwa.';
-    if (confirm(msg)) {
-      callAPI('/cancel-negotiation');
-    }
-  };
-
-  const handleConfirmFinalPrice = () => {
-    const msg = t('chat.negotiation.confirm') === 'Confirmer'
-      ? 'Confirmer ce prix et continuer la transaction ?'
-      : 'Thibitisha bei hii na kuendelea na biashara?';
-    if (confirm(msg)) {
-      callAPI('/confirm-final-price');
-    }
-  };
+  // Note: All negotiation actions are now handled in OrderDetail.tsx via Supabase
 
   return (
     <div className="flex flex-col h-[500px] border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
@@ -184,155 +105,8 @@ const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
         )}
       </div>
       
-      {/* Boutons d'action de négociation */}
-      {!isOrderCompleted && isNegotiation && isEscrowOpen && (
-        <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 space-y-2">
-          {isBuyer && (
-            <>
-              {!showPriceInput ? (
-                <button
-                  onClick={() => setShowPriceInput(true)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-                >
-                  <DollarSign className="w-4 h-4" />
-                  {t('chat.negotiation.confirm_price')}
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="number"
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder={t('chat.negotiation.new_price')}
-                    className="w-full p-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleConfirmFinalPrice}
-                      disabled={loading}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
-                    >
-                      <Check className="w-4 h-4" />
-                      {t('chat.negotiation.confirm')}
-                    </button>
-                    <button
-                      onClick={() => { setShowPriceInput(false); setPriceInput(''); }}
-                      className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm"
-                    >
-                      {t('chat.negotiation.cancel_confirm')}
-                    </button>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={handleCancelNegotiation}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition disabled:opacity-50"
-              >
-                <X className="w-4 h-4" />
-                {t('chat.negotiation.cancel')}
-              </button>
-            </>
-          )}
-
-          {isSeller && (
-            <>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAcceptPrice}
-                  disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  <Check className="w-4 h-4" />
-                  {t('chat.negotiation.accept')}
-                </button>
-                <button
-                  onClick={() => setShowPriceInput(true)}
-                  disabled={loading || showPriceInput}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition disabled:opacity-50"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  {t('chat.negotiation.counter')}
-                </button>
-              </div>
-              {showPriceInput && (
-                <div className="space-y-2">
-                  <input
-                    type="number"
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder={t('chat.negotiation.counter_price')}
-                    className="w-full p-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleCounterOffer}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {t('chat.negotiation.send')}
-                    </button>
-                    <button
-                      onClick={() => { setShowPriceInput(false); setPriceInput(''); }}
-                      className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm"
-                    >
-                      {t('chat.negotiation.cancel_confirm')}
-                    </button>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={handleCancelNegotiation}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition disabled:opacity-50"
-              >
-                <X className="w-4 h-4" />
-                {t('chat.negotiation.refuse')}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Bouton pour démarrer une négociation (acheteur seulement, si pas encore en négociation) */}
-      {!isOrderCompleted && !isNegotiation && isBuyer && order?.status === 'pending' && (
-        <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          {!showPriceInput ? (
-            <button
-              onClick={() => setShowPriceInput(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-            >
-                  <DollarSign className="w-4 h-4" />
-                  {t('chat.negotiation.propose')}
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="number"
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder={t('chat.negotiation.propose_amount')}
-                    className="w-full p-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleProposePrice}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {t('chat.negotiation.propose_and_block')}
-                    </button>
-                <button
-                  onClick={() => { setShowPriceInput(false); setPriceInput(''); }}
-                  className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Note: Tous les boutons de négociation ont été déplacés vers OrderDetail.tsx pour une meilleure UX */}
+      {/* La négociation se fait maintenant directement depuis la page de détail de la commande */}
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => {
