@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Menu, X, User as UserIcon, Wallet, LogOut, ChevronDown, Copy, Check, Settings, LayoutDashboard, ArrowLeftRight, Camera, Package, Sun, Moon, Languages, Bell } from 'lucide-react';
 import WalletModal, { WalletData } from './WalletModal';
+import { logger } from '../utils/logger';
 
 interface Profile {
   full_name: string | null;
@@ -27,30 +28,17 @@ const Navbar = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchNotificationCount();
-      // Polling toutes les 10 secondes pour les nouvelles notifications
-      const interval = setInterval(() => {
-        fetchNotificationCount();
-      }, 10000);
-      return () => clearInterval(interval);
-    } else {
-      setNotificationCount(0);
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
     const { data } = await supabase
       .from('profiles')
       .select('full_name, avatar_url')
-      .eq('id', user?.id)
+      .eq('id', user.id)
       .single();
     if (data) setProfile(data);
-  };
+  }, [user]);
 
-  const fetchNotificationCount = async () => {
+  const fetchNotificationCount = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -69,7 +57,7 @@ const Navbar = () => {
         .gte('created_at', oneDayAgoISO); // Uniquement les commandes créées dans les dernières 24h
 
       if (ordersError) {
-        console.error('Error fetching orders for notifications:', ordersError);
+        logger.error('Error fetching orders for notifications:', ordersError);
         return;
       }
 
@@ -112,9 +100,44 @@ const Navbar = () => {
 
       setNotificationCount(count);
     } catch (error) {
-      console.error('Error fetching notification count:', error);
+      logger.error('Error fetching notification count:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchNotificationCount();
+      // Polling toutes les 30 secondes pour les nouvelles notifications (optimisé)
+      const interval = setInterval(() => {
+        fetchNotificationCount();
+      }, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setNotificationCount(0);
+    }
+  }, [user, fetchProfile, fetchNotificationCount]);
+
+  // Fermer le menu mobile en cliquant en dehors
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const menuElement = document.querySelector('.mobile-menu-container');
+      const buttonElement = document.querySelector('.mobile-menu-button');
+      
+      if (menuElement && !menuElement.contains(target) && 
+          buttonElement && !buttonElement.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const handleWalletConnect = (walletData: WalletData) => {
     setConnectedWallet(walletData);
@@ -408,7 +431,10 @@ const Navbar = () => {
 
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              <button 
+                className="mobile-menu-button"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
                 {isMenuOpen ? <X /> : <Menu />}
               </button>
             </div>
@@ -417,111 +443,13 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-4 pt-4 pb-6 space-y-3 shadow-xl border-t border-gray-100 dark:border-gray-800 absolute w-full left-0">
-             {/* Language Selector Mobile */}
-             <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-               <span className="font-medium text-lg">Lugha / Langue</span>
-               <div className="flex items-center gap-2">
-                 <button
-                   onClick={() => {
-                     setLanguage('fr');
-                     setIsMenuOpen(false);
-                   }}
-                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                     language === 'fr' 
-                       ? 'bg-primary text-white' 
-                       : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                   }`}
-                 >
-                   🇫🇷 FR
-                 </button>
-                 <button
-                   onClick={() => {
-                     setLanguage('sw');
-                     setIsMenuOpen(false);
-                   }}
-                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                     language === 'sw' 
-                       ? 'bg-primary text-white' 
-                       : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                   }`}
-                 >
-                   🇨🇩 SW
-                 </button>
-               </div>
-             </div>
-
-             {/* Dark Mode Toggle Mobile */}
-             <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-               <span className="font-medium text-lg">Thème</span>
-               <button
-                 onClick={toggleTheme}
-                 className="p-2 rounded-full bg-white dark:bg-gray-700 shadow-sm transition"
-                 aria-label="Toggle theme"
-               >
-                 {theme === 'dark' ? (
-                   <Sun className="w-5 h-5 text-yellow-500" />
-                 ) : (
-                   <Moon className="w-5 h-5 text-gray-600" />
-                 )}
-               </button>
-             </div>
-             
-             {user && (
-               <Link 
-                 to="/dashboard" 
-                 className="block px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-lg"
-                 onClick={() => setIsMenuOpen(false)}
-               >
-                 {t('nav.dashboard')}
-               </Link>
-             )}
-             <Link 
-               to="/products" 
-               className="block px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-lg"
-               onClick={() => setIsMenuOpen(false)}
-             >
-               {t('nav.market')}
-             </Link>
-             {user && (
-               <Link 
-                 to="/orders" 
-                 className="relative block px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-lg"
-                 onClick={() => setIsMenuOpen(false)}
-               >
-                 <span className="flex items-center gap-2">
-                   {t('nav.orders')}
-                   {notificationCount > 0 && (
-                     <span className="flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
-                       {notificationCount > 99 ? '99+' : notificationCount}
-                     </span>
-                   )}
-                 </span>
-               </Link>
-             )}
-             {!user && (
-               <div className="grid grid-cols-2 gap-4 mt-4">
-                  <Link 
-                    to="/login" 
-                    className="block text-center py-3 rounded-lg border border-gray-200 dark:border-gray-700 font-medium text-primary hover:bg-gray-50 dark:hover:bg-gray-800"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.login')}
-                  </Link>
-                  <Link 
-                    to="/signup" 
-                    className="block text-center py-3 rounded-lg bg-primary text-white font-bold shadow-md hover:bg-blue-700"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.join')}
-                  </Link>
-               </div>
-             )}
-             {user && (
-               <>
-                  {/* Mobile Profile Card */}
+          <div className="mobile-menu-container md:hidden bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-xl border-t border-gray-100 dark:border-gray-800 absolute w-full left-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-[60] relative">
+            <div className="px-4 pt-4 pb-6 space-y-4">
+              {/* User Profile Section - En haut si connecté */}
+              {user && (
+                <>
                   <div className="bg-gradient-to-r from-primary to-blue-600 rounded-xl p-4 -mx-1">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mb-3">
                       {/* Profile Photo */}
                       <div className="relative">
                         {profile?.avatar_url ? (
@@ -554,115 +482,251 @@ const Navbar = () => {
                     </div>
                     
                     {/* Quick Profile Actions */}
-                    <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <Link
                         to="/profile"
                         onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 py-2 bg-white/20 rounded-lg text-white text-sm font-medium active:bg-white/30"
+                        className="flex items-center justify-center gap-2 py-2.5 bg-white/20 rounded-lg text-white text-sm font-medium active:bg-white/30 transition"
                       >
-                        <Settings size={16} />
-                        Modifier
+                        <Settings size={18} />
+                        <span>{t('nav.profile')}</span>
                       </Link>
                       <Link
                         to="/dashboard"
                         onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 py-2 bg-white/20 rounded-lg text-white text-sm font-medium active:bg-white/30"
+                        className="flex items-center justify-center gap-2 py-2.5 bg-white/20 rounded-lg text-white text-sm font-medium active:bg-white/30 transition"
                       >
-                        <LayoutDashboard size={16} />
-                        Dashboard
+                        <LayoutDashboard size={18} />
+                        <span>{t('nav.dashboard')}</span>
                       </Link>
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-100 my-3"></div>
+                  {/* Séparateur visuel */}
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-gray-700"></div>
+                </>
+              )}
 
-                  {/* AdaEx Exchange Button Mobile */}
-                  <a
-                    href="https://app.adaex.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 text-left font-medium text-orange-600 active:bg-orange-100"
-                  >
-                    <ArrowLeftRight size={20} />
-                    <div>
-                      <span className="block">Échanger ADA ↔ FC</span>
-                      <span className="text-xs text-orange-400">Via Mobile Money</span>
-                    </div>
-                  </a>
-                  
-                  {/* Mobile Wallet Section */}
-                  {connectedWallet ? (
-                    <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <img src={connectedWallet.icon} alt={connectedWallet.name} className="w-6 h-6 rounded-lg" />
-                          <span className="text-sm font-medium text-gray-700">{connectedWallet.name}</span>
-                        </div>
-                        <span className="font-bold text-emerald-600">{connectedWallet.balance.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ADA</span>
-                      </div>
-                      <div className="bg-white/60 rounded-lg p-2 mb-3">
-                        <p className="text-xs font-mono text-gray-500 break-all">
-                          {formatAddress(connectedWallet.addressBech32)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          handleDisconnectWallet();
-                          setIsMenuOpen(false);
-                        }}
-                        className="w-full text-center py-2 text-sm text-red-600 hover:bg-red-50 active:bg-red-100 rounded-lg transition"
-                      >
-                        Déconnecter le wallet
-                      </button>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => { 
-                        setIsWalletModalOpen(true); 
-                        setIsMenuOpen(false); 
-                      }}
-                      className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 text-left font-medium text-primary active:bg-blue-100"
-                    >
-                       <Wallet size={20} />
-                       <span>Connecter Wallet Cardano</span>
-                    </button>
-                  )}
+              {/* Navigation Principale */}
+              <div className="space-y-2">
+                <h3 className="px-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('nav.market')}
+                </h3>
+                <Link 
+                  to="/products" 
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 font-medium text-base transition"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Package size={22} className="text-primary" />
+                  <span>{t('nav.market')}</span>
+                </Link>
+              </div>
 
-                  <div className="border-t border-gray-100 my-3"></div>
-
-                  {/* Navigation Links */}
+              {user && (
+                <div className="space-y-2">
+                  <h3 className="px-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Navigation
+                  </h3>
                   <Link 
                     to="/dashboard" 
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 font-medium"
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 font-medium text-base transition"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <LayoutDashboard size={20} className="text-gray-400" />
+                    <LayoutDashboard size={22} className="text-primary" />
                     <span>{t('nav.dashboard')}</span>
                   </Link>
                   <Link 
                     to="/orders" 
-                    className="relative flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 font-medium"
+                    className="relative flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 font-medium text-base transition"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Package size={20} className="text-gray-400" />
-                    <span>Mes commandes</span>
+                    <Package size={22} className="text-primary" />
+                    <span>{t('nav.orders')}</span>
                     {notificationCount > 0 && (
-                      <span className="absolute right-4 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
+                      <span className="ml-auto flex items-center justify-center min-w-[24px] h-[24px] px-2 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
                         {notificationCount > 99 ? '99+' : notificationCount}
                       </span>
                     )}
                   </Link>
+                </div>
+              )}
 
-                  <button 
-                    onClick={() => { handleSignOut(); setIsMenuOpen(false); }} 
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-red-50 active:bg-red-100 text-red-500 font-medium"
+              {/* Wallet & Exchange Section */}
+              {user && (
+                <>
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-gray-700"></div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="px-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Wallet & Échange
+                    </h3>
+                    
+                    {/* AdaEx Exchange Button Mobile */}
+                    <a
+                      href="https://app.adaex.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 text-left font-medium text-orange-600 dark:text-orange-400 active:bg-orange-100 dark:active:bg-orange-900/30 transition"
+                    >
+                      <ArrowLeftRight size={22} />
+                      <div className="flex-1">
+                        <span className="block font-semibold">Échanger ADA ↔ FC</span>
+                        <span className="text-xs text-orange-500 dark:text-orange-400">Via Mobile Money</span>
+                      </div>
+                    </a>
+                    
+                    {/* Mobile Wallet Section */}
+                    {connectedWallet ? (
+                      <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <img src={connectedWallet.icon} alt={connectedWallet.name} className="w-7 h-7 rounded-lg" />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{connectedWallet.name}</span>
+                          </div>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">
+                            {connectedWallet.balance.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ₳
+                          </span>
+                        </div>
+                        <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-2.5 mb-3">
+                          <p className="text-xs font-mono text-gray-600 dark:text-gray-300 break-all">
+                            {formatAddress(connectedWallet.addressBech32)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            handleDisconnectWallet();
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full text-center py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:bg-red-100 dark:active:bg-red-900/30 rounded-lg transition"
+                        >
+                          Déconnecter le wallet
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => { 
+                          setIsWalletModalOpen(true); 
+                          setIsMenuOpen(false); 
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 text-left font-medium text-primary dark:text-blue-400 active:bg-blue-100 dark:active:bg-blue-900/30 transition"
+                      >
+                        <Wallet size={22} />
+                        <span className="font-semibold">{t('nav.connect_wallet')}</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Paramètres */}
+              <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-gray-700"></div>
+              
+              <div className="space-y-2">
+                <h3 className="px-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Paramètres
+                </h3>
+                
+                {/* Language Selector Mobile */}
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                  <div className="flex items-center gap-2">
+                    <Languages size={20} className="text-primary" />
+                    <span className="font-medium text-base">Lugha / Langue</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setLanguage('fr');
+                        setIsMenuOpen(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
+                        language === 'fr' 
+                          ? 'bg-primary text-white shadow-md' 
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      🇫🇷 FR
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLanguage('sw');
+                        setIsMenuOpen(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
+                        language === 'sw' 
+                          ? 'bg-primary text-white shadow-md' 
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      🇨🇩 SW
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dark Mode Toggle Mobile */}
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                  <div className="flex items-center gap-2">
+                    {theme === 'dark' ? (
+                      <Moon size={20} className="text-primary" />
+                    ) : (
+                      <Sun size={20} className="text-primary" />
+                    )}
+                    <span className="font-medium text-base">Thème</span>
+                  </div>
+                  <button
+                    onClick={toggleTheme}
+                    className="p-2.5 rounded-full bg-white dark:bg-gray-700 shadow-sm transition active:scale-95"
+                    aria-label="Toggle theme"
                   >
-                    <LogOut size={20} />
-                    <span>Déconnexion</span>
+                    {theme === 'dark' ? (
+                      <Sun className="w-6 h-6 text-yellow-500" />
+                    ) : (
+                      <Moon className="w-6 h-6 text-gray-600" />
+                    )}
                   </button>
-               </>
-             )}
+                </div>
+              </div>
+
+              {/* Boutons Login/Signup si non connecté */}
+              {!user && (
+                <>
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-gray-700"></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link 
+                      to="/login" 
+                      className="block text-center py-3.5 rounded-xl border-2 border-primary font-semibold text-primary hover:bg-primary/5 active:bg-primary/10 transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {t('nav.login')}
+                    </Link>
+                    <Link 
+                      to="/signup" 
+                      className="block text-center py-3.5 rounded-xl bg-primary text-white font-bold shadow-md hover:bg-blue-700 active:bg-blue-800 transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {t('nav.join')}
+                    </Link>
+                  </div>
+                </>
+              )}
+
+              {/* Bouton Déconnexion - Bien visible en bas */}
+              {user && (
+                <>
+                  <div className="h-px bg-gradient-to-r from-transparent via-red-200 to-transparent dark:via-red-800"></div>
+                  <button 
+                    onClick={() => { 
+                      handleSignOut(); 
+                      setIsMenuOpen(false); 
+                    }} 
+                    className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 text-white font-bold text-base shadow-lg transition transform active:scale-95"
+                  >
+                    <LogOut size={24} />
+                    <span>{t('nav.logout')}</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </nav>
@@ -685,6 +749,7 @@ const Navbar = () => {
           }}
         />
       )}
+
     </>
   );
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { logger } from '../utils/logger';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA, getExchangeRate } from '../utils/currencyConverter';
 import { 
   Search, 
@@ -101,7 +102,7 @@ const Products = () => {
       setProducts(availableProducts);
       setFilteredProducts(availableProducts);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      logger.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }

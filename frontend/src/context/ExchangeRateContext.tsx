@@ -35,7 +35,9 @@ export const ExchangeRateProvider: React.FC<{ children: ReactNode }> = ({ childr
       setLastUpdated(new Date());
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la mise à jour du taux');
-      console.error('Error refreshing exchange rate:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error refreshing exchange rate:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,9 @@ export const ExchangeRateProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement du taux');
-        console.error('Error initializing exchange rate:', err);
+        if (import.meta.env.DEV) {
+          console.error('Error initializing exchange rate:', err);
+        }
       } finally {
         setLoading(false);
       }

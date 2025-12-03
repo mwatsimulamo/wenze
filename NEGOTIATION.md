@@ -76,3 +76,4 @@ Assurez-vous que :
 - L'escrow est simulé (pas de vraie blockchain pour l'instant)
 - La structure est prête pour une intégration blockchain future
 
+

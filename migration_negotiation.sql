@@ -14,3 +14,4 @@ COMMENT ON COLUMN orders.proposed_price IS 'Montant proposé et bloqué en escro
 COMMENT ON COLUMN orders.final_price IS 'Prix final accepté par les deux parties';
 COMMENT ON COLUMN orders.escrow_status IS 'Statut de l''escrow: open (ouvert), cancelled (annulé), released (libéré)';
 
+

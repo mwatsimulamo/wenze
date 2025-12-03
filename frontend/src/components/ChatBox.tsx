@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { MessageSquare } from 'lucide-react';
-// API_BASE_URL removed - no longer needed, all negotiation logic is in OrderDetail.tsx via Supabase
+import { MessageSquare, Send, User, Check, CheckCheck, Clock, Info, AlertCircle } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -12,6 +11,7 @@ interface Message {
   created_at: string;
   profiles: {
     full_name: string;
+    avatar_url?: string;
   };
 }
 
@@ -25,35 +25,33 @@ interface Order {
   escrow_status: 'open' | 'cancelled' | 'released' | null;
   status: 'pending' | 'escrow_web2' | 'shipped' | 'completed' | 'disputed';
   amount_ada: number;
+  buyer?: { full_name: string; avatar_url?: string };
+  seller?: { full_name: string; avatar_url?: string };
 }
 
 const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const isNegotiation = order?.order_mode === 'negotiation';
   const isEscrowOpen = order?.escrow_status === 'open';
   const isOrderCompleted = order?.status === 'completed';
+  
+  // Déterminer qui est l'autre personne
+  const otherPerson = user?.id === order?.buyer_id 
+    ? order?.seller 
+    : order?.buyer;
+  const otherPersonName = otherPerson?.full_name || (language === 'fr' ? 'Vendeur' : 'Muuzaji');
+  const isBuyer = user?.id === order?.buyer_id;
 
-  useEffect(() => {
-    fetchMessages();
-    // Arrêter le polling si la commande est terminée
-    if (isOrderCompleted) return;
-    const interval = setInterval(fetchMessages, 2000);
-    return () => clearInterval(interval);
-  }, [orderId, isOrderCompleted]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     const { data, error } = await supabase
       .from('messages')
-      .select('*, profiles:sender_id(full_name)')
+      .select('*, profiles:sender_id(full_name, avatar_url)')
       .eq('order_id', orderId)
       .order('created_at', { ascending: true });
 
@@ -62,24 +60,66 @@ const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
         setMessages(data);
       }
     }
-  };
+  }, [orderId, messages.length]);
+
+  useEffect(() => {
+    fetchMessages();
+    // Arrêter le polling si la commande est terminée
+    if (isOrderCompleted) return;
+    // Polling optimisé : 5 secondes au lieu de 2
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [orderId, isOrderCompleted, fetchMessages]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || isOrderCompleted) return;
+    if (!newMessage.trim() || !user || isOrderCompleted || sending) return;
+
+    setSending(true);
+    const messageContent = newMessage.trim();
+    setNewMessage('');
 
     const { error } = await supabase
       .from('messages')
       .insert([{
         order_id: orderId,
         sender_id: user.id,
-        content: newMessage
+        content: messageContent
       }]);
 
+    setSending(false);
     if (!error) {
-      setNewMessage('');
       fetchMessages();
+    } else {
+      // Remettre le message en cas d'erreur
+      setNewMessage(messageContent);
     }
+  };
+
+  // Formater la date de manière simple
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return language === 'fr' ? 'À l\'instant' : 'Hivi sasa';
+    if (diffMins < 60) return `${diffMins}${language === 'fr' ? ' min' : ' dak'}`;
+    if (diffHours < 24) return `${diffHours}${language === 'fr' ? 'h' : ' saa'}`;
+    if (diffDays === 1) return language === 'fr' ? 'Hier' : 'Jana';
+    if (diffDays < 7) return `${diffDays}${language === 'fr' ? ' j' : ' siku'}`;
+    return date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'sw-TZ', { 
+      day: 'numeric', 
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   // Note: All negotiation actions are now handled in OrderDetail.tsx via Supabase

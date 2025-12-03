@@ -19,8 +19,6 @@ const SUPPORTED_WALLETS = ['nami', 'eternl', 'flint', 'vespr', 'lace', 'yoroi'];
  * sans dépendre de grosses librairies blockchain (compatibilité Vercel).
  */
 export const connectWallet = async (): Promise<string | null> => {
-  console.log("🔗 Initialisation de la connexion Blockchain WENZE...");
-
   if (!window.cardano) {
     alert("Aucun portefeuille Crypto détecté. Installez Nami ou Eternl pour continuer.");
     return null;
@@ -35,14 +33,15 @@ export const connectWallet = async (): Promise<string | null> => {
     for (const name of SUPPORTED_WALLETS) {
       if (window.cardano[name]) {
         try {
-          console.log(`🔌 Tentative de connexion à ${name}...`);
           // Demande l'autorisation à l'utilisateur
           selectedWalletApi = await window.cardano[name].enable();
           walletName = name;
           if (selectedWalletApi) break; // Connexion réussie !
         } catch (e) {
-          console.warn(`L'utilisateur a refusé ou erreur avec ${name}`, e);
           // On continue à chercher si l'utilisateur a un autre wallet
+          if (import.meta.env.DEV) {
+            console.warn(`L'utilisateur a refusé ou erreur avec ${name}`, e);
+          }
         }
       }
     }
@@ -53,7 +52,9 @@ export const connectWallet = async (): Promise<string | null> => {
          try {
             selectedWalletApi = await window.cardano.enable();
          } catch(e) {
-            console.error("Echec fallback legacy", e);
+            if (import.meta.env.DEV) {
+              console.error("Echec fallback legacy", e);
+            }
          }
       }
     }
@@ -72,13 +73,13 @@ export const connectWallet = async (): Promise<string | null> => {
     const displayAddress = first
       ? `${String(first).slice(0, 10)}...${String(first).slice(-6)}`
       : walletName || null;
-
-    console.log(`✅ Wallet WENZE Connecté (${walletName}):`, displayAddress);
     
     return displayAddress;
 
   } catch (error) {
-    console.error("❌ Erreur critique de connexion Blockchain:", error);
+    if (import.meta.env.DEV) {
+      console.error("❌ Erreur critique de connexion Blockchain:", error);
+    }
     alert("Erreur technique lors de la connexion au portefeuille.");
     return null;
   }

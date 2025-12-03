@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { logger } from '../utils/logger';
 import { 
   Package,
   ShoppingCart,
@@ -85,7 +86,7 @@ const Dashboard = () => {
       setRecentOrders(ordersData || []);
       setPendingActions(actionsData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -357,3 +358,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
