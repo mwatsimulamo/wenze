@@ -88,15 +88,14 @@ const Products = () => {
           *,
           profiles (full_name, avatar_url, reputation_score)
         `)
-        .eq('status', 'available')
-        .neq('status', 'sold') // Exclusion explicite des produits vendus
+        .eq('status', 'available') // Uniquement les produits disponibles
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Filtrage supplémentaire côté client pour garantir qu'aucun produit vendu n'apparaisse
+      // Filtrage supplémentaire côté client pour garantir qu'aucun produit vendu ou suspendu n'apparaisse
       const availableProducts = (data || []).filter(product => 
-        product.status === 'available' || !product.status
+        product.status === 'available' && product.status !== 'sold' && product.status !== 'suspended'
       );
       
       setProducts(availableProducts);

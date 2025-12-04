@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA } from '../utils/currencyConverter';
+import { getWZPTotal } from '../utils/getWZPTotal';
 import { 
   Star, 
   MapPin, 
@@ -46,6 +47,7 @@ const SellerProfile = () => {
   const [seller, setSeller] = useState<SellerData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats>({ totalProducts: 0, totalSales: 0, rating: 4.5 });
+  const [wzpTotal, setWzpTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,6 +96,12 @@ const SellerProfile = () => {
         totalSales: totalSales || 0,
         rating: 4.5 + Math.random() * 0.5, // Placeholder
       });
+
+      // Fetch WZP total
+      if (id) {
+        const total = await getWZPTotal(id);
+        setWzpTotal(total);
+      }
 
     } catch (error) {
       console.error('Error fetching seller:', error);
@@ -224,6 +232,14 @@ const SellerProfile = () => {
                 <span className="font-bold text-lg sm:text-xl">{stats.totalSales}</span>
               </div>
               <p className="text-xs text-gray-500">Ventes</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 sm:p-4 text-center">
+              <div className="flex items-center justify-center gap-1 text-purple-500 mb-1">
+                <Award className="w-4 h-4" />
+                <span className="font-bold text-lg sm:text-xl">{wzpTotal.toFixed(1)}</span>
+              </div>
+              <p className="text-xs text-gray-500">Points WZP</p>
             </div>
 
             <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-3 sm:p-4 text-center">

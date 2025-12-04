@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA } from '../utils/currencyConverter';
 import { useBlockchain } from '../context/BlockchainContext';
+import { distributeWZPAfterTransaction } from '../utils/distributeWZP';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -93,26 +94,7 @@ const ProductDetail = () => {
     return convertFCToADA(priceInFC);
   };
 
-  useEffect(() => {
-    if (id) fetchProduct(id);
-  }, [id]);
-
-  // Bloquer le scroll du body quand la modal est ouverte
-  useEffect(() => {
-    if (showNegotiateModal) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '0px';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    };
-  }, [showNegotiateModal]);
-
-  const fetchProduct = async (productId: string) => {
+  const fetchProduct = useCallback(async (productId: string) => {
     try {
       const { data, error } = await supabase
         .from('products')
@@ -142,7 +124,26 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (id) fetchProduct(id);
+  }, [id, fetchProduct]);
+
+  // Bloquer le scroll du body quand la modal est ouverte
+  useEffect(() => {
+    if (showNegotiateModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '0px';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [showNegotiateModal]);
 
   const handleBuy = async () => {
     if (!user) {
@@ -158,7 +159,16 @@ const ProductDetail = () => {
 
     // Vérifier que l'acheteur a un wallet connecté
     if (!walletConnected || !wallet) {
-      toast.error('Wallet requis', 'Vous devez connecter un wallet Cardano pour effectuer un achat en ADA. Connectez votre wallet depuis la barre de navigation.');
+      toast.error('Wallet requis', 'Vous devez connecter un wallet Cardano (Preprod) pour effectuer un achat en ADA. Connectez votre wallet depuis la barre de navigation.');
+      return;
+    }
+
+    // Vérifier que Lucid est disponible (nécessaire pour les transactions réelles)
+    if (!lucid) {
+      toast.error(
+        'Configuration requise',
+        'Blockfrost n\'est pas configuré ou Lucid n\'est pas initialisé. Les transactions réelles nécessitent VITE_BLOCKFROST_PROJECT_ID dans .env. Contactez l\'administrateur.'
+      );
       return;
     }
 
@@ -167,7 +177,7 @@ const ProductDetail = () => {
     if (!sellerAddress) {
       toast.error(
         'Wallet vendeur requis',
-        'Le vendeur doit connecter son wallet Cardano avant que vous puissiez effectuer un paiement. Veuillez informer le vendeur qu\'il doit connecter son wallet dans son profil.'
+        'Le vendeur doit connecter son wallet Cardano (Preprod) avant que vous puissiez effectuer un paiement. Veuillez informer le vendeur qu\'il doit connecter son wallet dans son profil.'
       );
       return;
     }
@@ -197,24 +207,75 @@ const ProductDetail = () => {
       // Récupérer l'adresse du vendeur (wallet_address)
       const sellerAddress = product.profiles?.wallet_address;
       
+      // Afficher un message informatif avant de lancer la transaction
+      toast.info(
+        'Transaction en cours...', 
+        'Votre wallet va demander confirmation. Veuillez approuver la transaction pour continuer.'
+      );
+
       // Passer l'instance Lucid du contexte si disponible
       const paymentPrep = await prepareAdaPayment(orderData.id, currentPriceInADA, sellerAddress || undefined, lucid || undefined);
 
-      await supabase
+      // Si la transaction a échoué, ne pas mettre à jour la commande ni marquer le produit comme vendu
+      if (paymentPrep.status === 'failed') {
+        // Supprimer la commande créée puisqu'elle n'a pas été payée
+        await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderData.id);
+        
+        toast.error('Transaction échouée', paymentPrep.message || 'La transaction n\'a pas pu être complétée. La commande a été annulée.');
+        return;
+      }
+
+      // Mettre à jour la commande uniquement si la transaction a réussi
+      const { error: updateOrderError } = await supabase
         .from('orders')
         .update({ status: 'escrow_web2', escrow_hash: paymentPrep.txHash })
         .eq('id', orderData.id);
       
-      await supabase
+      if (updateOrderError) {
+        console.error('Error updating order:', updateOrderError);
+        throw updateOrderError;
+      }
+      
+      // Marquer le produit comme vendu pour le retirer du marché (uniquement si transaction réussie)
+      const { error: productError } = await supabase
         .from('products')
         .update({ status: 'sold' })
         .eq('id', product.id);
-
-      // Afficher un message différent selon le statut de la transaction
-      if (paymentPrep.status === 'pending' && paymentPrep.txHash.startsWith('simulated_')) {
-        toast.warning('Commande créée (Simulation)', 'Transaction simulée. Configurez Blockfrost dans .env pour les vraies transactions blockchain.');
+      
+      if (productError) {
+        console.error('Error updating product status:', productError);
+        // Ne pas bloquer le flux si la mise à jour du produit échoue, mais logger l'erreur
       } else {
-        toast.success('Commande créée !', 'Vos fonds sont sécurisés en Escrow. Bon achat !');
+        console.log('✅ Produit marqué comme vendu:', product.id);
+      }
+
+      // Distribuer les WZP uniquement pour les transactions RÉELLES réussies
+      if (paymentPrep.status === 'success' && !paymentPrep.txHash.startsWith('simulated_')) {
+        const wzpResult = await distributeWZPAfterTransaction(
+          orderData.id,
+          user.id,
+          product.seller_id,
+          currentPriceInADA
+        );
+        
+        if (wzpResult.success && wzpResult.buyerWZP) {
+          console.log(`✅ ${wzpResult.buyerWZP.toFixed(2)} WZP distribués pour cette transaction réelle`);
+          toast.success('WZP distribués !', `${wzpResult.buyerWZP.toFixed(2)} WZP ont été attribués pour cette transaction.`);
+        }
+      }
+
+      // Afficher le résultat de la transaction (seulement si succès, car les erreurs sont déjà gérées plus haut)
+      if (paymentPrep.status === 'success') {
+        toast.success(
+          'Transaction réussie !', 
+          `Transaction ${paymentPrep.network} envoyée avec succès. Hash: ${paymentPrep.txHash.substring(0, 16)}...`
+        );
+        if (paymentPrep.explorerUrl) {
+          console.log(`🔗 Explorateur: ${paymentPrep.explorerUrl}`);
+        }
       }
       navigate('/orders');
 

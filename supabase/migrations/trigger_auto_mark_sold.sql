@@ -48,3 +48,4 @@ COMMENT ON FUNCTION mark_product_as_sold() IS
 
 
 
+

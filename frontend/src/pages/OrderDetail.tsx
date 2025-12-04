@@ -8,7 +8,8 @@ import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { useToast } from '../components/Toast';
 import { useBlockchain } from '../context/BlockchainContext';
 import { convertFCToADA, convertADAToFC, formatFC, formatADA } from '../utils/currencyConverter';
-import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon, Clock, Info } from 'lucide-react';
+import { distributeWZPAfterTransaction } from '../utils/distributeWZP';
+import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon, Clock, Info, ExternalLink } from 'lucide-react';
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -105,12 +106,32 @@ const OrderDetail = () => {
               }
             }
             
-            // Simuler récompense WZP
-            await supabase.from('wzp_transactions').insert([
-                { user_id: order.buyer_id, amount: 2.5, type: 'earn_buy' },
-                { user_id: order.seller_id, amount: 2.5, type: 'earn_sell' }
-            ]);
-            toast.success('Commande terminée !', 'Les fonds ont été libérés, le produit a été retiré du marché et les WZP distribués.');
+            // Distribuer les WZP après transaction complétée
+            if (order?.buyer_id && order?.seller_id) {
+              const amountAda = order.final_price || order.proposed_price || order.amount_ada || 0;
+              
+              if (amountAda > 0) {
+                const wzpResult = await distributeWZPAfterTransaction(
+                  id!,
+                  order.buyer_id,
+                  order.seller_id,
+                  amountAda
+                );
+                
+                if (wzpResult.success && wzpResult.buyerWZP) {
+                  toast.success(
+                    'Commande terminée !', 
+                    `Les fonds ont été libérés, le produit a été retiré du marché. ${wzpResult.buyerWZP.toFixed(2)} WZP distribués à chaque partie.`
+                  );
+                } else {
+                  toast.success('Commande terminée !', 'Les fonds ont été libérés, le produit a été retiré du marché.');
+                }
+              } else {
+                toast.success('Commande terminée !', 'Les fonds ont été libérés, le produit a été retiré du marché.');
+              }
+            } else {
+              toast.success('Commande terminée !', 'Les fonds ont été libérés, le produit a été retiré du marché.');
+            }
         }
     }
   };
@@ -269,10 +290,31 @@ const OrderDetail = () => {
 
       // Marquer le produit comme vendu (retirer du marché)
       if (order?.product_id) {
-        await supabase
+        const { error: productError } = await supabase
           .from('products')
           .update({ status: 'sold' })
           .eq('id', order.product_id);
+        
+        if (productError) {
+          console.error('Error updating product status:', productError);
+        } else {
+          console.log('✅ Produit marqué comme vendu:', order.product_id);
+        }
+      }
+
+      // Distribuer les WZP uniquement pour les transactions RÉELLES réussies
+      if (paymentPrep.status === 'success' && !paymentPrep.txHash.startsWith('simulated_') && order?.buyer_id && order?.seller_id) {
+        const wzpResult = await distributeWZPAfterTransaction(
+          id!,
+          order.buyer_id,
+          order.seller_id,
+          priceToPay
+        );
+        
+        if (wzpResult.success && wzpResult.buyerWZP) {
+          console.log(`✅ ${wzpResult.buyerWZP.toFixed(2)} WZP distribués pour cette transaction réelle`);
+          toast.success('WZP distribués !', `${wzpResult.buyerWZP.toFixed(2)} WZP ont été attribués pour cette transaction.`);
+        }
       }
 
       // Envoyer un message automatique au vendeur
@@ -447,6 +489,42 @@ const OrderDetail = () => {
                     </p>
                 </div>
             </div>
+
+            {/* Informations de Transaction */}
+            {order.escrow_hash && order.escrow_hash !== '' && !order.escrow_hash.startsWith('simulated_') && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <h4 className="font-bold text-green-900 dark:text-green-100 mb-2">
+                                Transaction Blockchain
+                            </h4>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Hash de transaction :</span>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded font-mono border border-gray-200 dark:border-gray-700">
+                                            {order.escrow_hash.substring(0, 16)}...
+                                        </code>
+                                        <a
+                                            href={`https://preprod.cardanoscan.io/transaction/${order.escrow_hash}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-green-600 dark:text-green-400 hover:underline flex items-center gap-1 text-xs font-medium"
+                                        >
+                                            Voir sur l'explorateur
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    💡 Cette transaction devrait apparaître dans votre wallet sous peu. Si elle n'apparaît pas après quelques minutes, vérifiez l'explorateur Cardano ci-dessus.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Actions Zone */}
             <div className="mt-6 border-t pt-6">
@@ -740,13 +818,39 @@ const OrderDetail = () => {
                                 <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                                     L'acheteur a payé. Les fonds sont sécurisés en escrow. Confirmez que vous avez accepté cette transaction.
                                 </p>
-                                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 dark:border-blue-700 space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600 dark:text-gray-400">Montant en escrow :</span>
                                         <span className="text-lg font-bold text-primary">
                                             {formatADA(order.final_price || order.amount_ada)} ADA
                                         </span>
                                     </div>
+                                    {order.escrow_hash && (
+                                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Transaction :</span>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
+                                                        {order.escrow_hash.substring(0, 16)}...
+                                                    </code>
+                                                    {order.escrow_hash && !order.escrow_hash.startsWith('simulated_') && (
+                                                        <a
+                                                            href={`https://preprod.cardanoscan.io/transaction/${order.escrow_hash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 text-xs"
+                                                        >
+                                                            Voir
+                                                            <ExternalLink className="w-3 h-3" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Cette transaction devrait apparaître dans votre wallet sous peu. Si elle n'apparaît pas, vérifiez l'explorateur.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

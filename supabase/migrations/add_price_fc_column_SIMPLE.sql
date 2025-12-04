@@ -12,3 +12,4 @@ UPDATE products SET price_fc = price_ada * 2400 WHERE price_fc IS NULL;
 
 
 
+

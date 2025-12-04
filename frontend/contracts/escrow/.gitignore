@@ -1,0 +1,11 @@
+# Aiken build artifacts
+build/
+*.uplc
+*.plutus
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+

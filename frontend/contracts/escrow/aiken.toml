@@ -1,0 +1,15 @@
+[package]
+name = "wenze_escrow"
+version = "1.0.0"
+description = "Smart Contract Escrow pour WENZE Marketplace"
+repository = "https://github.com/wenze/escrow"
+
+[compiler]
+name = "aiken"
+version = ">= 1.0.0"
+
+[build]
+platform = "windows" # ou "linux", "macos"
+
+[dependencies]
+

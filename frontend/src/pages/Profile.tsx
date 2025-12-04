@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { getWZPTotal } from '../utils/getWZPTotal';
 import { 
   Camera, 
   User, 
@@ -8,7 +9,8 @@ import {
   AtSign,
   Save,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Award
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -30,6 +32,7 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [wzpTotal, setWzpTotal] = useState<number>(0);
   
   const [form, setForm] = useState({
     full_name: '',
@@ -39,6 +42,7 @@ const Profile = () => {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchWZPTotal();
     }
   }, [user]);
 
@@ -65,6 +69,13 @@ const Profile = () => {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWZPTotal = async () => {
+    if (user?.id) {
+      const total = await getWZPTotal(user.id);
+      setWzpTotal(total);
     }
   };
 
@@ -269,6 +280,26 @@ const Profile = () => {
               <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-400">
                 L'email ne peut pas être modifié
               </p>
+            </div>
+
+            {/* WZP Points */}
+            <div className="pt-3 sm:pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg sm:rounded-xl border border-amber-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 font-medium">Points WZP</p>
+                    <p className="text-lg sm:text-xl font-bold text-amber-600">{wzpTotal.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] sm:text-xs text-gray-500">
+                    Gagnés via transactions ADA
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Member Since */}

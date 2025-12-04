@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { logger } from '../utils/logger';
+import { getWZPTotal } from '../utils/getWZPTotal';
 import { 
   Package,
   ShoppingCart,
@@ -13,7 +14,8 @@ import {
   AlertCircle,
   ArrowRight,
   TrendingUp,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Award
 } from 'lucide-react';
 
 interface Order {
@@ -39,6 +41,7 @@ const Dashboard = () => {
     totalSales: 0,
     totalProducts: 0,
     pendingCount: 0,
+    wzpTotal: 0,
   });
 
   useEffect(() => {
@@ -76,11 +79,18 @@ const Dashboard = () => {
         .eq('seller_id', user?.id)
         .in('status', ['pending', 'escrow_web2']);
 
+      // Fetch WZP total
+      let wzpTotal = 0;
+      if (user?.id) {
+        wzpTotal = await getWZPTotal(user.id);
+      }
+
       setStats({
         totalOrders: buyerOrders.count || 0,
         totalSales: sellerOrders.count || 0,
         totalProducts: products.count || 0,
         pendingCount: pendingCount || 0,
+        wzpTotal: wzpTotal,
       });
 
       setRecentOrders(ordersData || []);
@@ -197,7 +207,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -228,6 +238,15 @@ const Dashboard = () => {
             <span className="text-xs sm:text-sm text-gray-500">En attente</span>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-dark">{stats.pendingCount}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 sm:p-5 border border-amber-100 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+            <span className="text-xs sm:text-sm text-gray-600 font-medium">Points WZP</span>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-amber-600">{stats.wzpTotal.toFixed(1)}</p>
+          <p className="text-[10px] sm:text-xs text-amber-600/70 mt-1">Gagnés via ADA</p>
         </div>
       </div>
 
