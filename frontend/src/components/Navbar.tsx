@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
+import { useBlockchain } from "../context/BlockchainContext";
 import { supabase } from "../lib/supabase";
 import {
   Menu,
@@ -34,13 +35,11 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { wallet: connectedWallet, connectWallet, disconnectWallet, network } = useBlockchain();
   const navigate = useNavigate();
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [connectedWallet, setConnectedWallet] = useState<WalletData | null>(
-    null
-  );
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
@@ -111,7 +110,7 @@ const Navbar = () => {
             }
           }
 
-          // Pour l'acheteur : produit expédié (mais seulement si la commande est nouvelle)
+          // Pour l'acheteur : commande confirmée (mais seulement si la commande est nouvelle)
           if (isBuyer) {
             if (order.status === "shipped") {
               count++;
@@ -174,8 +173,21 @@ const Navbar = () => {
     };
   }, [isMenuOpen]);
 
-  const handleWalletConnect = (walletData: WalletData) => {
-    setConnectedWallet(walletData);
+  const handleWalletConnect = async (walletData: WalletData) => {
+    connectWallet(walletData);
+    
+    // Sauvegarder automatiquement l'adresse wallet dans le profil
+    if (user && walletData.addressBech32) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ wallet_address: walletData.addressBech32 })
+          .eq('id', user.id);
+        console.log('✅ Adresse wallet sauvegardée dans le profil');
+      } catch (error) {
+        console.warn('⚠️ Erreur lors de la sauvegarde de l\'adresse wallet:', error);
+      }
+    }
   };
 
   const copyWalletAddress = () => {
@@ -187,13 +199,13 @@ const Navbar = () => {
   };
 
   const handleDisconnectWallet = () => {
-    setConnectedWallet(null);
+    disconnectWallet();
     setShowWalletDropdown(false);
   };
 
   const handleSignOut = async () => {
     await signOut();
-    setConnectedWallet(null);
+    disconnectWallet();
     navigate("/login");
   };
 

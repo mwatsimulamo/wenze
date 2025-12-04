@@ -46,3 +46,8 @@ WHERE
 
 -- Si cette dernière requête retourne 0, c'est parfait ! ✅
 
+
+
+
+
+

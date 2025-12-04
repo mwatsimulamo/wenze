@@ -13,3 +13,8 @@ ADD COLUMN IF NOT EXISTS shoe_number TEXT;
 COMMENT ON COLUMN products.fashion_type IS 'Type de produit mode: habit ou soulier';
 COMMENT ON COLUMN products.shoe_number IS 'Numéro de chaussure (taille européenne)';
 
+
+
+
+
+

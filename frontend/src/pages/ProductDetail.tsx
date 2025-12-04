@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA } from '../utils/currencyConverter';
+import { useBlockchain } from '../context/BlockchainContext';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -29,7 +30,8 @@ import {
   DollarSign,
   MessageSquare,
   Smartphone,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Info
 } from 'lucide-react';
 
 interface Product {
@@ -55,6 +57,7 @@ interface Product {
     avatar_url: string;
     reputation_score: number;
     is_verified: boolean;
+    wallet_address?: string;
   };
 }
 
@@ -63,6 +66,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+  const { lucid, isConnected: walletConnected, wallet } = useBlockchain(); // Récupérer Lucid et statut wallet
   const NO_ESCROW_CATEGORIES = ['service', 'real_estate', 'auto'];
   
   const [product, setProduct] = useState<Product | null>(null);
@@ -76,6 +80,7 @@ const ProductDetail = () => {
   const [showNegotiateModal, setShowNegotiateModal] = useState(false);
   const [negotiatePriceFC, setNegotiatePriceFC] = useState<string>('');
   const [negotiating, setNegotiating] = useState(false);
+  const [showMobileMoneyModal, setShowMobileMoneyModal] = useState(false);
 
   // Fonction helper pour obtenir le prix en FC (fixe)
   const getPriceInFC = (product: Product): number => {
@@ -111,7 +116,7 @@ const ProductDetail = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*, profiles:seller_id(username, full_name, avatar_url, reputation_score, is_verified, email)')
+        .select('*, profiles:seller_id(username, full_name, avatar_url, reputation_score, is_verified, email, wallet_address)')
         .eq('id', productId)
         .single();
 
@@ -151,6 +156,22 @@ const ProductDetail = () => {
       return;
     }
 
+    // Vérifier que l'acheteur a un wallet connecté
+    if (!walletConnected || !wallet) {
+      toast.error('Wallet requis', 'Vous devez connecter un wallet Cardano pour effectuer un achat en ADA. Connectez votre wallet depuis la barre de navigation.');
+      return;
+    }
+
+    // Vérifier que le vendeur a un wallet connecté (adresse enregistrée)
+    const sellerAddress = product.profiles?.wallet_address;
+    if (!sellerAddress) {
+      toast.error(
+        'Wallet vendeur requis',
+        'Le vendeur doit connecter son wallet Cardano avant que vous puissiez effectuer un paiement. Veuillez informer le vendeur qu\'il doit connecter son wallet dans son profil.'
+      );
+      return;
+    }
+
     setProcessing(true);
 
     try {
@@ -173,7 +194,11 @@ const ProductDetail = () => {
 
       if (orderError) throw orderError;
 
-      const paymentPrep = await prepareAdaPayment(orderData.id, currentPriceInADA);
+      // Récupérer l'adresse du vendeur (wallet_address)
+      const sellerAddress = product.profiles?.wallet_address;
+      
+      // Passer l'instance Lucid du contexte si disponible
+      const paymentPrep = await prepareAdaPayment(orderData.id, currentPriceInADA, sellerAddress || undefined, lucid || undefined);
 
       await supabase
         .from('orders')
@@ -185,7 +210,12 @@ const ProductDetail = () => {
         .update({ status: 'sold' })
         .eq('id', product.id);
 
-      toast.success('Commande créée !', 'Vos fonds sont sécurisés en Escrow. Bon achat !');
+      // Afficher un message différent selon le statut de la transaction
+      if (paymentPrep.status === 'pending' && paymentPrep.txHash.startsWith('simulated_')) {
+        toast.warning('Commande créée (Simulation)', 'Transaction simulée. Configurez Blockfrost dans .env pour les vraies transactions blockchain.');
+      } else {
+        toast.success('Commande créée !', 'Vos fonds sont sécurisés en Escrow. Bon achat !');
+      }
       navigate('/orders');
 
     } catch (error) {
@@ -666,21 +696,19 @@ const ProductDetail = () => {
                     </button>
 
                     {/* Option Mobile Money */}
-                    <div className="relative">
-                      <button 
-                        disabled
-                        className="w-full flex items-center justify-between gap-3 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold py-4 px-4 rounded-xl sm:rounded-2xl cursor-not-allowed opacity-60"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Smartphone className="w-5 h-5" />
-                          <span>Payer avec Mobile Money</span>
-                        </div>
-                        <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg font-medium flex items-center gap-1">
-                          <ClockIcon className="w-3 h-3" />
-                          Vient bientôt
-                        </span>
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => setShowMobileMoneyModal(true)}
+                      className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl sm:rounded-2xl hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition cursor-pointer shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <span>Payer avec Mobile Money</span>
+                      </div>
+                      <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg font-medium flex items-center gap-1">
+                        <ClockIcon className="w-3 h-3" />
+                        Bientôt disponible
+                      </span>
+                    </button>
                   </div>
 
                   <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
@@ -1113,6 +1141,105 @@ const ProductDetail = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Mobile Money - Opérateurs disponibles à Goma */}
+      {showMobileMoneyModal && (
+        <div className="fixed bottom-4 left-1/2 z-[100] animate-slide-up-toast">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 p-5 max-w-md w-[calc(100vw-2rem)]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <h3 className="font-bold text-dark dark:text-white text-sm">Mobile Money - Bientôt disponible</h3>
+              </div>
+              <button 
+                onClick={() => setShowMobileMoneyModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Grille de carreaux - Opérateurs */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {/* M-Pesa */}
+              <div className="relative group bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-green-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <rect x="20" y="25" width="15" height="45" rx="2" fill="white"/>
+                      <rect x="42" y="25" width="15" height="45" rx="2" fill="white"/>
+                      <path d="M 62 25 L 75 45 L 62 65 L 62 50 L 57 50 L 57 40 L 62 40 Z" fill="white"/>
+                      <circle cx="50" cy="75" r="3" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">M-Pesa</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Airtel Money */}
+              <div className="relative group bg-gradient-to-br from-red-500 via-red-600 to-rose-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-red-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <path d="M 30 70 L 50 30 L 70 70 L 62 70 L 50 45 L 38 70 Z" fill="white"/>
+                      <rect x="52" y="50" width="15" height="20" rx="2" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Airtel</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Orange Money */}
+              <div className="relative group bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-orange-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <circle cx="50" cy="50" r="25" fill="none" stroke="white" strokeWidth="6"/>
+                      <circle cx="50" cy="50" r="15" fill="white" opacity="0.3"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Orange</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Africell Money */}
+              <div className="relative group bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-blue-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <path d="M 35 70 L 50 35 L 65 70 L 57 70 L 50 50 L 43 70 Z" fill="white"/>
+                      <circle cx="50" cy="60" r="3" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Africell</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Message info */}
+            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+              Disponible prochainement à Goma
+            </p>
           </div>
         </div>
       )}

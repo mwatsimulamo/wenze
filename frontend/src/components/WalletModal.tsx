@@ -105,10 +105,30 @@ const convertBits = (data: Uint8Array, fromBits: number, toBits: number, pad: bo
   return ret;
 };
 
-const hexToBech32 = (hex: string): string => {
+const hexToBech32 = (hex: string, isTestnet?: boolean): string => {
   try {
+    // Si l'adresse est déjà en Bech32, la retourner telle quelle
+    if (hex.startsWith('addr1') || hex.startsWith('addr_test')) {
+      return hex;
+    }
+    
     const bytes = hexToBytes(hex);
-    const prefix = bytes[0] === 0x00 || bytes[0] === 0x01 ? 'addr_test' : 'addr';
+    
+    // Détecter le réseau depuis les bytes si non spécifié
+    let prefix = 'addr';
+    if (isTestnet !== undefined) {
+      prefix = isTestnet ? 'addr_test' : 'addr';
+    } else {
+      // Détection automatique depuis les bytes
+      // 0x00, 0x01 = testnet, 0x60, 0x61 = mainnet pour les adresses de base
+      const firstByte = bytes[0];
+      if (firstByte === 0x00 || firstByte === 0x01) {
+        prefix = 'addr_test';
+      } else {
+        prefix = 'addr';
+      }
+    }
+    
     const data = convertBits(bytes, 8, 5, true);
     const checksum = bech32CreateChecksum(prefix, data);
     return prefix + '1' + [...data, ...checksum].map(d => BECH32_ALPHABET[d]).join('');
@@ -167,8 +187,43 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
       
       if (addresses.length === 0) throw new Error('Aucune adresse trouvée');
 
-      const addressHex = addresses[0];
-      const addressBech32 = hexToBech32(addressHex);
+      let addressRaw = addresses[0];
+      let addressHex = addressRaw;
+      let addressBech32 = addressRaw;
+
+      // Les wallets CIP-30 retournent généralement les adresses déjà en Bech32
+      // Vérifier si l'adresse est déjà en format Bech32
+      if (typeof addressRaw === 'string' && (addressRaw.startsWith('addr1') || addressRaw.startsWith('addr_test'))) {
+        // L'adresse est déjà en Bech32 avec le bon préfixe, utiliser directement
+        addressBech32 = addressRaw;
+        addressHex = addressRaw;
+      } else {
+        // L'adresse est en hex, il faut la convertir en Bech32
+        // D'abord, obtenir le réseau depuis le wallet pour être sûr
+        try {
+          let isTestnet = false;
+          
+          // Utiliser getNetworkId() pour détecter le réseau réel
+          if (walletApi.getNetworkId) {
+            const networkId = await walletApi.getNetworkId();
+            // networkId: 0 = testnet, 1 = mainnet
+            isTestnet = networkId === 0;
+          } else {
+            // Fallback : détecter depuis les bytes (moins fiable)
+            const bytes = hexToBytes(addressRaw);
+            isTestnet = bytes[0] === 0x00 || bytes[0] === 0x01;
+            console.warn('getNetworkId() not available, using byte detection (may be inaccurate)');
+          }
+          
+          addressHex = addressRaw;
+          addressBech32 = hexToBech32(addressRaw, isTestnet);
+        } catch (e) {
+          console.error('Error converting address:', e);
+          // En cas d'erreur, utiliser l'adresse telle quelle
+          addressHex = addressRaw;
+          addressBech32 = addressRaw;
+        }
+      }
 
       let balanceAda = 0;
       try {

@@ -47,3 +47,19 @@ body {
 ::selection {
   @apply bg-primary/20 text-primary;
 }
+
+/* Animation pour le toast qui remonte depuis le bas */
+@keyframes slideUpFromBottom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-slide-up-toast {
+  animation: slideUpFromBottom 0.3s ease-out forwards;
+}

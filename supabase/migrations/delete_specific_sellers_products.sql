@@ -171,3 +171,8 @@ WHERE full_name IN ('Olivier M', 'Kaota', 'olivier M', 'KAOTA')
 
 -- Ensuite utilisez ces IDs dans l'OPTION B
 
+
+
+
+
+

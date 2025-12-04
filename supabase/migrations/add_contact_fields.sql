@@ -13,3 +13,8 @@ ADD COLUMN IF NOT EXISTS contact_email TEXT;
 COMMENT ON COLUMN products.contact_whatsapp IS 'WhatsApp number for service contact (required for services)';
 COMMENT ON COLUMN products.contact_email IS 'Email address for service contact (required for services)';
 
+
+
+
+
+

@@ -98,3 +98,8 @@ WHERE
 -- Si cette requête retourne 0, tout est bon ! ✅
 -- Si elle retourne un nombre > 0, il reste des produits à corriger.
 
+
+
+
+
+

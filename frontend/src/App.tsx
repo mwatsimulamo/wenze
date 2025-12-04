@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import { ToastProvider } from './components/Toast';
 import { ExchangeRateProvider } from './context/ExchangeRateContext';
+import { BlockchainProvider } from './context/BlockchainContext';
 
 // Lazy load pages for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -56,9 +57,10 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <AuthProvider>
-      <ExchangeRateProvider>
-        <ToastProvider>
-          <Router>
+      <BlockchainProvider>
+        <ExchangeRateProvider>
+          <ToastProvider>
+            <Router>
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 {/* Auth pages - Full screen without Layout */}
@@ -134,6 +136,7 @@ function App() {
           </Router>
         </ToastProvider>
       </ExchangeRateProvider>
+      </BlockchainProvider>
     </AuthProvider>
   );
 }

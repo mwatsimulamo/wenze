@@ -19,7 +19,7 @@ import {
 interface Order {
   id: string;
   status: string;
-  total_amount: number;
+  amount_ada: number;
   created_at: string;
   products: {
     title: string;
@@ -57,14 +57,14 @@ const Dashboard = () => {
 
       const { data: ordersData } = await supabase
         .from('orders')
-        .select(`id, status, total_amount, created_at, products (title, image_url)`)
+        .select(`id, status, amount_ada, created_at, products (title, image_url)`)
         .eq('buyer_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(5);
 
       const { data: actionsData } = await supabase
         .from('orders')
-        .select(`id, status, total_amount, created_at, products (title, image_url)`)
+        .select(`id, status, amount_ada, created_at, products (title, image_url)`)
         .eq('seller_id', user?.id)
         .in('status', ['pending', 'escrow_web2'])
         .order('created_at', { ascending: false })
@@ -106,7 +106,7 @@ const Dashboard = () => {
     switch (status) {
       case 'pending': return 'En attente';
       case 'escrow_web2': return 'Fonds bloqués';
-      case 'shipped': return 'Expédié';
+      case 'shipped': return 'Confirmée';
       case 'completed': return 'Terminé';
       case 'cancelled': return 'Annulé';
       default: return status;
@@ -270,7 +270,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-dark text-sm sm:text-base">{order.total_amount} ADA</p>
+                    <p className="font-bold text-dark text-sm sm:text-base">{order.amount_ada} ADA</p>
                     <p className="text-[10px] sm:text-xs text-gray-400">
                       {new Date(order.created_at).toLocaleDateString('fr-FR')}
                     </p>
@@ -320,7 +320,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-dark text-sm sm:text-base">{order.total_amount} ADA</p>
+                    <p className="font-bold text-dark text-sm sm:text-base">{order.amount_ada} ADA</p>
                     <p className="text-[10px] sm:text-xs text-gray-400">
                       {new Date(order.created_at).toLocaleDateString('fr-FR')}
                     </p>

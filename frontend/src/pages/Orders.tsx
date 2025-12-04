@@ -63,7 +63,7 @@ const Orders = () => {
         };
       case 'shipped':
         return { 
-          label: 'Expédié', 
+          label: 'Confirmée', 
           color: 'bg-violet-50 text-violet-600 border-violet-200',
           icon: Truck
         };

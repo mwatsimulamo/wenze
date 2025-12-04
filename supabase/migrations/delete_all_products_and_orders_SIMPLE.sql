@@ -43,3 +43,8 @@ SELECT
 
 -- Si toutes les valeurs sont 0, c'est parfait ! ✅
 
+
+
+
+
+

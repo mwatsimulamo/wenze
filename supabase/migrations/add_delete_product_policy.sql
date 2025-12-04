@@ -14,3 +14,8 @@ USING (auth.uid() = seller_id);
 COMMENT ON POLICY "Sellers can delete their own products" ON products IS 
 'Permet aux vendeurs de supprimer uniquement leurs propres produits.';
 
+
+
+
+
+

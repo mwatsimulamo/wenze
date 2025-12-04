@@ -73,3 +73,8 @@ SELECT 'WZP_TRANSACTIONS', COUNT(*) FROM wzp_transactions WHERE reference_id IS 
 
 -- Si toutes les valeurs sont 0, la suppression est réussie ! ✅
 
+
+
+
+
+

@@ -43,3 +43,8 @@ EXECUTE FUNCTION mark_product_as_sold();
 COMMENT ON FUNCTION mark_product_as_sold() IS 
 'Marque automatiquement un produit comme vendu dès qu''une commande active est créée ou mise à jour';
 
+
+
+
+
+

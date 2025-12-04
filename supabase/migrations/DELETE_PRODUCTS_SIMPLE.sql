@@ -71,3 +71,8 @@ FROM products p
 JOIN profiles pr ON p.seller_id = pr.id
 WHERE pr.full_name ILIKE '%Olivier%M%' OR pr.full_name ILIKE '%Kaota%';
 
+
+
+
+
+

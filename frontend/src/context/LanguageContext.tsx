@@ -205,6 +205,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     localStorage.setItem('wenze-language', language);
+    // Mettre à jour l'attribut lang du HTML
+    document.documentElement.lang = language;
   }, [language]);
 
   const setLanguage = (lang: Language) => {

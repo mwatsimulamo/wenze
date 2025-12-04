@@ -6,19 +6,22 @@ import ChatBox from '../components/ChatBox';
 import { prepareAdaRelease } from '../blockchain/prepareAdaRelease';
 import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { useToast } from '../components/Toast';
+import { useBlockchain } from '../context/BlockchainContext';
 import { convertFCToADA, convertADAToFC, formatFC, formatADA } from '../utils/currencyConverter';
-import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon } from 'lucide-react';
+import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon, Clock, Info } from 'lucide-react';
 
 const OrderDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const toast = useToast();
+  const { lucid, isConnected: walletConnected, wallet } = useBlockchain();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showNewNegotiationModal, setShowNewNegotiationModal] = useState(false);
   const [newNegotiatePriceFC, setNewNegotiatePriceFC] = useState<string>('');
   const [newNegotiating, setNewNegotiating] = useState(false);
+  const [showMobileMoneyModal, setShowMobileMoneyModal] = useState(false);
 
   useEffect(() => {
     if (id) fetchOrder();
@@ -57,6 +60,22 @@ const OrderDetail = () => {
       console.error('Error fetching order:', error);
     }
     setLoading(false);
+  };
+
+  // Fonction utilitaire pour récupérer l'adresse du vendeur
+  // Priorité : wallet connecté du contexte si c'est l'utilisateur actuel, sinon base de données
+  const getSellerAddress = (): string | undefined => {
+    if (!order || !user) return undefined;
+    
+    const isSeller = user.id === order.seller_id;
+    
+    // Si c'est l'utilisateur actuel qui est le vendeur et qu'il a un wallet connecté, utiliser cette adresse
+    if (isSeller && walletConnected && wallet) {
+      return wallet.addressBech32;
+    }
+    
+    // Sinon, chercher dans la base de données
+    return order.seller?.wallet_address;
   };
 
   const updateStatus = async (newStatus: string) => {
@@ -100,6 +119,36 @@ const OrderDetail = () => {
   const handleAcceptNegotiation = async () => {
     if (!order || !user) return;
     
+    // Vérifier que le vendeur a un wallet connecté
+    // Utiliser la fonction utilitaire qui priorise le wallet connecté du contexte
+    let sellerAddress = getSellerAddress();
+    
+    // Si c'est le vendeur actuel et qu'il a un wallet connecté, sauvegarder l'adresse dans le profil
+    const isSeller = user.id === order.seller_id;
+    if (isSeller && walletConnected && wallet && wallet.addressBech32) {
+      sellerAddress = wallet.addressBech32;
+      
+      // Sauvegarder l'adresse dans le profil si ce n'est pas déjà fait
+      if (sellerAddress && sellerAddress !== order.seller?.wallet_address) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ wallet_address: sellerAddress })
+            .eq('id', user.id);
+        } catch (error) {
+          console.warn('Erreur lors de la sauvegarde de l\'adresse wallet:', error);
+        }
+      }
+    }
+    
+    if (!sellerAddress) {
+      toast.warning(
+        'Wallet requis pour recevoir le paiement',
+        'Vous devez connecter votre wallet Cardano pour recevoir le paiement de l\'acheteur. Connectez votre wallet depuis la barre de navigation, puis revenez accepter cette proposition.'
+      );
+      return;
+    }
+    
     setProcessing(true);
     try {
       const finalPrice = order.proposed_price || order.amount_ada;
@@ -137,7 +186,7 @@ const OrderDetail = () => {
   const handleRejectNegotiation = async () => {
     if (!order || !user) return;
     
-    if (!confirm('Êtes-vous sûr de vouloir refuser cette proposition ?')) {
+    if (!confirm('Êtes-vous sûr de vouloir refuser cette proposition ? L\'acheteur pourra en proposer une autre.')) {
       return;
     }
 
@@ -147,7 +196,7 @@ const OrderDetail = () => {
         .from('orders')
         .update({ 
           escrow_status: 'cancelled',
-          status: 'disputed'
+          status: 'pending' // Rester en pending pour permettre une nouvelle proposition
         })
         .eq('id', id);
 
@@ -159,10 +208,10 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: '❌ Proposition refusée. Vous pouvez discuter et proposer un nouveau prix si nécessaire.'
+          content: '❌ Proposition refusée. N\'hésitez pas à discuter avec moi dans le chat ou à proposer un nouveau prix !'
         }]);
 
-      toast.info('Proposition refusée', 'La négociation a été annulée.');
+      toast.info('Proposition refusée', 'L\'acheteur peut maintenant proposer un nouveau prix ou discuter avec vous.');
       fetchOrder();
     } catch (error: any) {
       console.error('Error rejecting negotiation:', error);
@@ -176,12 +225,35 @@ const OrderDetail = () => {
   const handlePayAfterNegotiation = async () => {
     if (!order || !user) return;
     
+    // Vérifier que l'acheteur a un wallet connecté
+    if (!walletConnected || !wallet) {
+      toast.error('Wallet requis', 'Vous devez connecter un wallet Cardano pour effectuer le paiement. Connectez votre wallet depuis la barre de navigation.');
+      return;
+    }
+    
+    // Récupérer l'adresse du vendeur (utilise la fonction utilitaire qui priorise le wallet connecté)
+    let sellerAddress = getSellerAddress();
+    
+    // Si l'adresse n'est pas trouvée, essayer de recharger l'ordre au cas où elle aurait été mise à jour
+    if (!sellerAddress) {
+      await fetchOrder();
+      sellerAddress = getSellerAddress();
+    }
+    
+    if (!sellerAddress) {
+      toast.error(
+        'Wallet vendeur requis',
+        'Le vendeur doit connecter son wallet Cardano avant que vous puissiez effectuer un paiement. Veuillez informer le vendeur qu\'il doit connecter son wallet depuis la barre de navigation.'
+      );
+      return;
+    }
+    
     setProcessing(true);
     try {
       const priceToPay = order.final_price || order.proposed_price || order.amount_ada;
       
-      // Préparer le paiement
-      const paymentPrep = await prepareAdaPayment(id!, priceToPay);
+      // Préparer le paiement avec l'adresse du vendeur et Lucid
+      const paymentPrep = await prepareAdaPayment(id!, priceToPay, sellerAddress || undefined, lucid || undefined);
 
       // Mettre à jour la commande : escrow ouvert
       const { error: updateError } = await supabase
@@ -210,7 +282,7 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: `💰 Paiement effectué ! ${formatFC(priceInFC)} FC (≈ ${formatADA(priceToPay)} ADA) sont maintenant en escrow. Vous pouvez expédier le produit.`
+          content: `💰 Paiement effectué ! ${formatFC(priceInFC)} FC (≈ ${formatADA(priceToPay)} ADA) sont maintenant en escrow. Veuillez confirmer la commande.`
         }]);
 
       toast.success('Paiement effectué !', `Le vendeur a été notifié que ${formatFC(priceInFC)} FC sont en escrow.`);
@@ -309,7 +381,7 @@ const OrderDetail = () => {
 
                 <div className={`flex flex-col items-center ${['shipped', 'completed'].includes(order.status) ? 'text-primary' : 'text-gray-300'}`}>
                     <div className="w-8 h-8 rounded-full bg-current flex items-center justify-center text-white font-bold mb-1">3</div>
-                    <span>Expédiée</span>
+                    <span>Confirmée</span>
                 </div>
                 <div className={`h-1 flex-1 mx-2 ${['completed'].includes(order.status) ? 'bg-primary' : 'bg-gray-200'}`} />
 
@@ -378,75 +450,156 @@ const OrderDetail = () => {
 
             {/* Actions Zone */}
             <div className="mt-6 border-t pt-6">
-                <h3 className="font-bold mb-3">Actions requises</h3>
+                <h3 className="font-bold mb-4">Actions requises</h3>
+                
+                {/* Indicateur de flux de négociation - Timeline simple */}
+                {order.order_mode === 'negotiation' && (
+                    <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-5 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-blue-900 dark:text-blue-100 text-sm uppercase tracking-wide">
+                                📋 Flux de négociation
+                            </h4>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className={`flex flex-col items-center flex-1 ${order.proposed_price ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-1 ${
+                                    order.proposed_price 
+                                        ? 'bg-blue-600 text-white' 
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                }`}>
+                                    1
+                                </div>
+                                <span className="text-center font-medium">Proposition envoyée</span>
+                            </div>
+                            <div className={`h-1 flex-1 ${order.proposed_price ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                            <div className={`flex flex-col items-center flex-1 ${
+                                order.final_price 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : order.escrow_status === 'cancelled'
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : order.proposed_price
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-gray-400'
+                            }`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-1 ${
+                                    order.final_price
+                                        ? 'bg-green-600 text-white'
+                                        : order.escrow_status === 'cancelled'
+                                        ? 'bg-red-600 text-white'
+                                        : order.proposed_price
+                                        ? 'bg-blue-600 text-white animate-pulse'
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                }`}>
+                                    {order.final_price ? '✓' : order.escrow_status === 'cancelled' ? '✗' : '2'}
+                                </div>
+                                <span className="text-center font-medium">
+                                    {order.final_price 
+                                        ? 'Acceptée ✓' 
+                                        : order.escrow_status === 'cancelled'
+                                        ? 'Refusée ✗'
+                                        : 'En attente'}
+                                </span>
+                            </div>
+                            <div className={`h-1 flex-1 ${order.final_price && order.escrow_status === 'open' ? 'bg-green-600' : order.final_price ? 'bg-gray-200' : 'bg-gray-200'}`} />
+                            <div className={`flex flex-col items-center flex-1 ${
+                                order.escrow_status === 'open' || order.status === 'escrow_web2'
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : order.final_price
+                                    ? 'text-gray-400'
+                                    : 'text-gray-400'
+                            }`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold mb-1 ${
+                                    order.escrow_status === 'open' || order.status === 'escrow_web2'
+                                        ? 'bg-green-600 text-white' 
+                                        : order.final_price
+                                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                }`}>
+                                    3
+                                </div>
+                                <span className="text-center font-medium">Paiement</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Négociation en attente - Vendeur peut accepter/refuser */}
                 {order.order_mode === 'negotiation' && 
                  order.status === 'pending' && 
                  order.proposed_price && 
                  !order.final_price && 
+                 !order.escrow_status &&
                  isSeller && (
-                    <div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-xl border-2 border-amber-200 dark:border-amber-800">
-                        <div className="flex items-start gap-3 mb-4">
-                            <MessageSquare className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1" />
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border-2 border-amber-300 dark:border-amber-700 shadow-lg">
+                        <div className="flex items-start gap-4 mb-5">
+                            <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 animate-pulse">
+                                <MessageSquare className="w-6 h-6 text-white" />
+                            </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-amber-900 dark:text-amber-100 mb-1">
-                                    Nouvelle proposition de prix
+                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-1">
+                                    💰 Nouvelle proposition de prix
                                 </h4>
                                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                                    L'acheteur propose un nouveau prix pour ce produit.
+                                    L'acheteur vous propose un nouveau prix. Décidez rapidement !
                                 </p>
                             </div>
                         </div>
                         
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg mb-4 border border-amber-200 dark:border-amber-700">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Prix proposé :</span>
-                                <span className="text-lg font-bold text-primary">
-                                    {formatADA(order.proposed_price)} ADA
-                                    {order.products?.price_fc && (
-                                        <span className="text-sm text-gray-500 ml-2">
-                                            (≈ {formatFC(convertADAToFC(order.proposed_price))} FC)
-                                        </span>
-                                    )}
-                                </span>
-                            </div>
-                            {order.products?.price_fc && (
-                                <div className="flex items-center justify-between text-xs text-gray-500">
-                                    <span>Prix initial :</span>
-                                    <span className="line-through">
-                                        {formatFC(order.products.price_fc)} FC
+                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl mb-5 border-2 border-amber-200 dark:border-amber-700 shadow-sm">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Prix proposé :</span>
+                                    <span className="text-2xl font-bold text-primary">
+                                        {formatADA(order.proposed_price)} ADA
                                     </span>
                                 </div>
-                            )}
+                                {order.products?.price_fc && (
+                                    <>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-500 dark:text-gray-400">En FC :</span>
+                                            <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                                {formatFC(convertADAToFC(order.proposed_price))} FC
+                                            </span>
+                                        </div>
+                                        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-gray-500">Prix initial :</span>
+                                                <span className="line-through text-gray-400">
+                                                    {formatFC(order.products.price_fc)} FC
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-4">
                             <button
                                 onClick={handleRejectNegotiation}
                                 disabled={processing}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-700 border-2 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition font-medium disabled:opacity-50"
+                                className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-4 bg-white dark:bg-gray-700 border-2 border-red-400 dark:border-red-600 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition font-semibold disabled:opacity-50 shadow-md"
                             >
-                                <X className="w-5 h-5" />
-                                Refuser
+                                <X className="w-6 h-6" />
+                                <span>Refuser</span>
                             </button>
                             <button
                                 onClick={handleAcceptNegotiation}
                                 disabled={processing}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-medium disabled:opacity-50 shadow-lg shadow-green-500/30"
+                                className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition font-semibold disabled:opacity-50 shadow-lg shadow-green-500/40 transform hover:scale-105 active:scale-95"
                             >
                                 {processing ? (
                                     <>
-                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                         </svg>
-                                        Traitement...
+                                        <span>Traitement...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <CheckCircle className="w-5 h-5" />
-                                        Accepter
+                                        <CheckCircle className="w-6 h-6" />
+                                        <span>Accepter</span>
                                     </>
                                 )}
                             </button>
@@ -460,73 +613,76 @@ const OrderDetail = () => {
                  order.final_price && 
                  !order.escrow_status && 
                  isBuyer && (
-                    <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-xl border-2 border-green-200 dark:border-green-800">
-                        <div className="flex items-start gap-3 mb-4">
-                            <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-lg">
+                        <div className="flex items-start gap-4 mb-5">
+                            <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 animate-bounce">
+                                <CheckCircle className="w-7 h-7 text-white" />
+                            </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-green-900 dark:text-green-100 mb-1">
-                                    Proposition acceptée !
+                                <h4 className="font-bold text-green-900 dark:text-green-100 text-lg mb-1">
+                                    ✅ Proposition acceptée !
                                 </h4>
                                 <p className="text-sm text-green-700 dark:text-green-300">
-                                    Le vendeur a accepté votre proposition. Procédez au paiement pour mettre les fonds en escrow.
+                                    Excellent ! Le vendeur a accepté votre proposition. Procédez maintenant au paiement sécurisé.
                                 </p>
                             </div>
                         </div>
                         
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg mb-4 border border-green-200 dark:border-green-700">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Prix à payer :</span>
-                                <span className="text-xl font-bold text-primary">
-                                    {formatADA(order.final_price)} ADA
-                                    {order.products?.price_fc && (
-                                        <span className="text-sm text-gray-500 ml-2">
-                                            (≈ {formatFC(convertADAToFC(order.final_price))} FC)
-                                        </span>
-                                    )}
-                                </span>
+                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl mb-5 border-2 border-green-200 dark:border-green-700 shadow-sm">
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Montant à payer</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl font-bold text-primary">
+                                        {formatADA(order.final_price)}
+                                    </span>
+                                    <span className="text-lg font-semibold text-primary">ADA</span>
+                                </div>
+                                {order.products?.price_fc && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        ≈ {formatFC(convertADAToFC(order.final_price))} FC
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        {/* Méthodes de paiement */}
-                        <div className="space-y-3 mb-4">
-                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Méthode de paiement</p>
+                        {/* Méthodes de paiement - Plus simples */}
+                        <div className="space-y-3">
+                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Choisissez votre méthode de paiement</p>
                             
-                            {/* Option ADA */}
+                            {/* Option ADA - Bouton principal */}
                             <button
                                 onClick={handlePayAfterNegotiation}
                                 disabled={processing}
-                                className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:bg-primary/90 transition font-medium disabled:opacity-50 shadow-lg shadow-primary/30"
+                                className="w-full flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:from-primary/90 hover:to-blue-600/90 transition font-semibold disabled:opacity-50 shadow-xl shadow-primary/40 transform hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                     {processing ? (
-                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                         </svg>
                                     ) : (
-                                        <ShoppingCart className="w-5 h-5" />
+                                        <ShoppingCart className="w-6 h-6" />
                                     )}
-                                    <span>{processing ? 'Traitement...' : 'Payer avec ADA'}</span>
+                                    <span className="text-base">{processing ? 'Traitement du paiement...' : 'Payer avec ADA'}</span>
                                 </div>
-                                <span className="text-xs bg-white/20 px-2 py-1 rounded-lg font-medium">Disponible</span>
+                                <span className="text-xs bg-white/30 px-3 py-1 rounded-full font-medium">Recommandé</span>
                             </button>
 
                             {/* Option Mobile Money */}
-                            <div className="relative">
-                                <button 
-                                    disabled
-                                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl cursor-not-allowed opacity-60"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Smartphone className="w-5 h-5" />
-                                        <span>Payer avec Mobile Money</span>
-                                    </div>
-                                    <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg font-medium flex items-center gap-1">
-                                        <ClockIcon className="w-3 h-3" />
-                                        Vient bientôt
-                                    </span>
-                                </button>
-                            </div>
+                            <button 
+                                onClick={() => setShowMobileMoneyModal(true)}
+                                className="w-full flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700 text-gray-700 dark:text-gray-300 rounded-xl hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition cursor-pointer shadow-sm"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Smartphone className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                    <span className="text-base font-medium">Payer avec Mobile Money</span>
+                                </div>
+                                <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                                    <ClockIcon className="w-3 h-3" />
+                                    Bientôt disponible
+                                </span>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -534,35 +690,45 @@ const OrderDetail = () => {
                 {/* Négociation refusée - Acheteur peut proposer un nouveau prix */}
                 {order.order_mode === 'negotiation' && 
                  order.escrow_status === 'cancelled' && (
-                    <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-xl border-2 border-red-200 dark:border-red-800">
-                        <div className="flex items-start gap-3 mb-4">
-                            <X className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-1" />
+                    <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-6 rounded-xl border-2 border-red-300 dark:border-red-700 shadow-lg">
+                        <div className="flex items-start gap-4 mb-5">
+                            <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                                <X className="w-7 h-7 text-white" />
+                            </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-red-900 dark:text-red-100 mb-1">
-                                    Proposition refusée
+                                <h4 className="font-bold text-red-900 dark:text-red-100 text-lg mb-2">
+                                    ❌ Proposition refusée
                                 </h4>
-                                <p className="text-sm text-red-700 dark:text-red-300">
-                                    La négociation a été annulée par le vendeur. Vous pouvez discuter dans le chat et proposer un nouveau prix si nécessaire.
+                                <p className="text-sm text-red-700 dark:text-red-300 mb-1">
+                                    Le vendeur n'a pas accepté cette proposition. Pas de problème, vous pouvez :
                                 </p>
+                                <ul className="text-xs text-red-600 dark:text-red-400 space-y-1 mt-2 list-disc list-inside">
+                                    <li>Discuter avec le vendeur dans le chat ci-contre</li>
+                                    <li>Proposer un nouveau prix en cliquant sur le bouton ci-dessous</li>
+                                </ul>
                             </div>
                         </div>
+                        
                         {isBuyer && (
                             <button
                                 onClick={() => {
                                     const currentPriceFC = order.products?.price_fc || convertADAToFC(order.amount_ada);
-                                    setNewNegotiatePriceFC(currentPriceFC.toString());
+                                    // Pré-remplir avec un prix légèrement inférieur à la dernière proposition refusée
+                                    const lastProposedFC = order.proposed_price ? convertADAToFC(order.proposed_price) : currentPriceFC;
+                                    const suggestedPrice = Math.max(1, Math.floor(lastProposedFC * 0.95)); // 5% de moins
+                                    setNewNegotiatePriceFC(suggestedPrice.toString());
                                     setShowNewNegotiationModal(true);
                                 }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition font-medium"
+                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:from-primary/90 hover:to-blue-600/90 transition font-semibold shadow-xl shadow-primary/40 transform hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                <RotateCcw className="w-5 h-5" />
-                                Proposer un nouveau prix
+                                <RotateCcw className="w-6 h-6" />
+                                <span>Envoyer une nouvelle proposition</span>
                             </button>
                         )}
                     </div>
                 )}
 
-                {/* Escrow ouvert - Vendeur peut expédier */}
+                {/* Escrow ouvert - Vendeur peut confirmer */}
                 {order.status === 'escrow_web2' && isSeller && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border-2 border-blue-200 dark:border-blue-800">
                         <div className="flex items-start gap-3 mb-4">
@@ -572,7 +738,7 @@ const OrderDetail = () => {
                                     Argent en escrow
                                 </h4>
                                 <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                                    L'acheteur a payé. Les fonds sont sécurisés en escrow. Vous pouvez maintenant expédier le produit.
+                                    L'acheteur a payé. Les fonds sont sécurisés en escrow. Confirmez que vous avez accepté cette transaction.
                                 </p>
                                 <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
                                     <div className="flex items-center justify-between">
@@ -588,22 +754,22 @@ const OrderDetail = () => {
                             onClick={() => updateStatus('shipped')} 
                             className="w-full bg-primary text-white py-3 rounded-xl hover:bg-primary/90 transition font-medium"
                         >
-                            Confirmer l'expédition
+                            Confirmer la commande
                         </button>
                     </div>
                 )}
 
-                {/* Produit expédié - Acheteur peut confirmer réception */}
+                {/* Commande confirmée - Acheteur peut confirmer réception */}
                 {order.status === 'shipped' && isBuyer && (
                     <div className="bg-violet-50 dark:bg-violet-900/20 p-5 rounded-xl border-2 border-violet-200 dark:border-violet-800">
                         <div className="flex items-start gap-3 mb-4">
                             <CheckCircle className="w-6 h-6 text-violet-600 dark:text-violet-400 flex-shrink-0 mt-1" />
                             <div className="flex-1">
                                 <h4 className="font-bold text-violet-900 dark:text-violet-100 mb-1">
-                                    Produit expédié
+                                    Commande confirmée
                                 </h4>
                                 <p className="text-sm text-violet-700 dark:text-violet-300">
-                                    Le vendeur a expédié le colis. Confirmez la réception pour libérer les fonds en escrow.
+                                    Le vendeur a confirmé avoir accepté votre commande. Confirmez la réception pour libérer les fonds en escrow.
                                 </p>
                             </div>
                         </div>
@@ -644,17 +810,26 @@ const OrderDetail = () => {
                  order.status === 'pending' && 
                  order.proposed_price && 
                  !order.final_price && 
+                 !order.escrow_status &&
                  isBuyer && (
-                    <div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-xl border-2 border-amber-200 dark:border-amber-800">
-                        <div className="flex items-start gap-3">
-                            <MessageSquare className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1" />
+                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6 rounded-xl border-2 border-amber-300 dark:border-amber-700 shadow-lg">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 animate-pulse">
+                                <Clock className="w-7 h-7 text-white" />
+                            </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-amber-900 dark:text-amber-100 mb-1">
-                                    Proposition envoyée
+                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-2">
+                                    ⏳ En attente de réponse
                                 </h4>
-                                <p className="text-sm text-amber-700 dark:text-amber-300">
-                                    En attente de la réponse du vendeur concernant votre proposition de {formatADA(order.proposed_price)} ADA.
+                                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                                    Votre proposition de <strong>{formatADA(order.proposed_price)} ADA</strong> a été envoyée au vendeur. 
+                                    Il examinera votre offre et vous répondra bientôt.
                                 </p>
+                                <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg border border-amber-200 dark:border-amber-700">
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                        💡 Astuce : Vous pouvez discuter avec le vendeur dans le chat pour négocier davantage !
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -665,7 +840,23 @@ const OrderDetail = () => {
 
       {/* Colonne Droite: Chat */}
       <div className="lg:col-span-1">
-        <ChatBox orderId={id!} order={order} />
+        <ChatBox 
+          orderId={id!} 
+          order={order}
+          onProposeNewPrice={
+            order?.order_mode === 'negotiation' && 
+            order?.escrow_status === 'cancelled' && 
+            isBuyer
+              ? () => {
+                  const currentPriceFC = order.products?.price_fc || convertADAToFC(order.amount_ada);
+                  const lastProposedFC = order.proposed_price ? convertADAToFC(order.proposed_price) : currentPriceFC;
+                  const suggestedPrice = Math.max(1, Math.floor(lastProposedFC * 0.95));
+                  setNewNegotiatePriceFC(suggestedPrice.toString());
+                  setShowNewNegotiationModal(true);
+                }
+              : undefined
+          }
+        />
         
         <div className="mt-6 card bg-gray-50">
             <h3 className="font-bold text-sm text-gray-500 uppercase mb-3">Détails techniques (Simulés)</h3>
@@ -890,6 +1081,105 @@ const OrderDetail = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Mobile Money - Opérateurs disponibles à Goma */}
+      {showMobileMoneyModal && (
+        <div className="fixed bottom-4 left-1/2 z-[100] animate-slide-up-toast">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 p-5 max-w-md w-[calc(100vw-2rem)]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <h3 className="font-bold text-dark dark:text-white text-sm">Mobile Money - Bientôt disponible</h3>
+              </div>
+              <button 
+                onClick={() => setShowMobileMoneyModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Grille de carreaux - Opérateurs */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {/* M-Pesa */}
+              <div className="relative group bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-green-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <rect x="20" y="25" width="15" height="45" rx="2" fill="white"/>
+                      <rect x="42" y="25" width="15" height="45" rx="2" fill="white"/>
+                      <path d="M 62 25 L 75 45 L 62 65 L 62 50 L 57 50 L 57 40 L 62 40 Z" fill="white"/>
+                      <circle cx="50" cy="75" r="3" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">M-Pesa</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Airtel Money */}
+              <div className="relative group bg-gradient-to-br from-red-500 via-red-600 to-rose-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-red-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <path d="M 30 70 L 50 30 L 70 70 L 62 70 L 50 45 L 38 70 Z" fill="white"/>
+                      <rect x="52" y="50" width="15" height="20" rx="2" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Airtel</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Orange Money */}
+              <div className="relative group bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-orange-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <circle cx="50" cy="50" r="25" fill="none" stroke="white" strokeWidth="6"/>
+                      <circle cx="50" cy="50" r="15" fill="white" opacity="0.3"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Orange</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+
+              {/* Africell Money */}
+              <div className="relative group bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-blue-400/30 aspect-square flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-10 h-10">
+                      <path d="M 35 70 L 50 35 L 65 70 L 57 70 L 50 50 L 43 70 Z" fill="white"/>
+                      <circle cx="50" cy="60" r="3" fill="white"/>
+                    </svg>
+                  </div>
+                  <p className="font-bold text-white text-xs text-center">Africell</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Bientôt
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Message info */}
+            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+              Disponible prochainement à Goma
+            </p>
           </div>
         </div>
       )}

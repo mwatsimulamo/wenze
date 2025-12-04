@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { MessageSquare, Send, User, Check, CheckCheck, Clock, Info, AlertCircle, DollarSign } from 'lucide-react';
+import { MessageSquare, Send, User, Check, CheckCheck, Clock, Info, AlertCircle, DollarSign, RotateCcw } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -29,7 +29,7 @@ interface Order {
   seller?: { full_name: string; avatar_url?: string };
 }
 
-const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
+const ChatBox = ({ orderId, order, onProposeNewPrice }: { orderId: string; order?: Order; onProposeNewPrice?: () => void }) => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -165,6 +165,24 @@ const ChatBox = ({ orderId, order }: { orderId: string; order?: Order }) => {
                 ? 'Cette conversation est terminée. Vous pouvez consulter l\'historique ci-dessous.' 
                 : 'Mazungumzo haya yameisha. Unaweza kuangalia historia hapa chini.'}
             </p>
+          </div>
+        )}
+        
+        {!isOrderCompleted && isNegotiation && order?.escrow_status === 'cancelled' && isBuyer && onProposeNewPrice && (
+          <div className="mt-3 p-3 bg-red-500/90 backdrop-blur-sm rounded-lg border border-white/30">
+            <p className="text-xs text-white mb-2 flex items-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4" />
+              {language === 'fr' 
+                ? 'Proposition refusée - Vous pouvez en proposer une nouvelle' 
+                : 'Pendekezo limekataliwa - Unaweza kupendekeza jipya'}
+            </p>
+            <button
+              onClick={onProposeNewPrice}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition text-sm font-semibold backdrop-blur-sm border border-white/30"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {language === 'fr' ? 'Envoyer une nouvelle proposition' : 'Tuma pendekezo jipya'}
+            </button>
           </div>
         )}
         

@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    target: 'es2020',
+    target: 'es2022', // Support pour top-level await (requis pour Lucid Cardano)
     outDir: 'dist',
     minify: 'esbuild',
     sourcemap: false,
@@ -21,5 +21,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', '@supabase/supabase-js'],
+    exclude: ['lucid-cardano'], // Exclure lucid-cardano de l'optimisation (gère ses propres WASM)
+    esbuildOptions: {
+      target: 'es2022', // Support pour top-level await
+    },
+  },
+  esbuild: {
+    target: 'es2022', // Support pour top-level await
   },
 })
