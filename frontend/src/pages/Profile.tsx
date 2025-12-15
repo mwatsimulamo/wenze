@@ -10,7 +10,9 @@ import {
   Save,
   Check,
   ArrowLeft,
-  Award
+  Award,
+  Edit3,
+  MoreVertical
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -160,17 +162,38 @@ const Profile = () => {
   return (
     <div className="max-w-2xl mx-auto px-1 sm:px-0">
       {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <Link 
-          to="/dashboard" 
-          className="p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition"
-        >
-          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
-        </Link>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-dark">Mon Profil</h1>
-          <p className="text-gray-500 mt-0.5 sm:mt-1 text-sm sm:text-base">Gérez vos informations</p>
+      <div className="flex items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link 
+            to="/dashboard" 
+            className="p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition"
+          >
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+          </Link>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-dark">Mon Profil</h1>
+            <p className="text-gray-500 mt-0.5 sm:mt-1 text-sm sm:text-base">Gérez vos informations</p>
+          </div>
         </div>
+        {/* Bouton Modifier discret */}
+        <button
+          onClick={handleSaveProfile}
+          disabled={saving}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Enregistrer les modifications"
+        >
+          {saving ? (
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          ) : (
+            <>
+              <Edit3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Enregistrer</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Profile Card */}
@@ -319,28 +342,6 @@ const Profile = () => {
               </p>
             </div>
           </div>
-
-          {/* Save Button */}
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving}
-            className="mt-6 sm:mt-8 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-3.5 sm:py-4 px-6 rounded-xl hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-          >
-            {saving ? (
-              <>
-                <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                <span>Enregistrement...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>Enregistrer</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>
