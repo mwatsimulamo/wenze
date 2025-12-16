@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { logger } from '../utils/logger';
 import { getWZPTotal } from '../utils/getWZPTotal';
+import ExchangeOperators from '../components/ExchangeOperators';
 import { 
   Package,
   ShoppingCart,
@@ -189,21 +190,8 @@ const Dashboard = () => {
           </div>
         </Link>
 
-        {/* AdaEx */}
-        <a
-          href="https://app.adaex.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group aspect-square sm:aspect-auto flex flex-col items-center justify-center sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 sm:p-5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl text-white shadow-lg shadow-orange-500/10 hover:shadow-xl hover:shadow-orange-500/20 transition-all active:scale-[0.97] sm:hover:-translate-y-1"
-        >
-          <div className="w-14 h-14 sm:w-12 sm:h-12 bg-white/20 backdrop-blur rounded-2xl sm:rounded-xl flex items-center justify-center">
-            <ArrowLeftRight className="w-7 h-7 sm:w-6 sm:h-6" />
-          </div>
-          <div className="text-center sm:text-left">
-            <p className="text-base sm:text-lg font-bold">Échanger</p>
-            <p className="text-orange-100 text-[10px] sm:text-xs hidden sm:block">ADA ↔ FC (Momo)</p>
-          </div>
-        </a>
+        {/* Exchange Operators */}
+        <ExchangeOperators variant="card" />
       </div>
 
       {/* Stats Cards */}

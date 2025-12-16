@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import CardanoChatBot from "./CardanoChatBot";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -10,6 +11,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {children}
       </main>
       <Footer />
+      <CardanoChatBot />
     </div>
   );
 };

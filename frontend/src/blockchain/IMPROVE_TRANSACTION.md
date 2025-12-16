@@ -35,3 +35,8 @@ Améliorer `prepareAdaPayment` pour mieux gérer les cas d'erreur et vérifier l
 
 
 
+
+
+
+
+

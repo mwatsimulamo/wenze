@@ -1,10 +1,10 @@
 /**
  * Prépare et exécute une transaction de paiement ADA avec Lucid
- * Pour le moment : transaction simple (sans smart contract)
- * Plus tard : intégration avec smart contract escrow
+ * Utilise le smart contract escrow pour verrouiller les fonds
  */
 
 import { getLucid, adaToLovelace, getExplorerUrl } from './lucidService';
+import { lockFundsInEscrow } from './escrowContract';
 import { Lucid } from 'lucid-cardano';
 
 export interface PaymentResult {
@@ -71,57 +71,50 @@ export const prepareAdaPayment = async (
     console.log('💰 Montant:', amountAda, 'ADA (', amountLovelace.toString(), 'Lovelace)');
     console.log('💳 Solde disponible:', (Number(balance) / 1_000_000).toFixed(6), 'ADA');
 
-    // Créer une transaction SIMPLE : juste envoyer de l'ADA du wallet connecté au vendeur
-    // Pas d'escrow, pas de smart contract, juste un transfert direct
-    console.log('🔨 Création de la transaction simple (sans escrow)...');
+    // Obtenir l'adresse de l'acheteur (wallet connecté)
+    const buyerAddress = await lucid.wallet.address();
+    if (!buyerAddress) {
+      throw new Error('Impossible d\'obtenir l\'adresse du wallet connecté');
+    }
+
+    console.log('🔒 Création de la transaction escrow...');
     console.log('📋 Détails de la transaction:');
-    console.log('   - De: Wallet connecté');
-    console.log('   - Vers:', sellerAddress);
+    console.log('   - Acheteur:', buyerAddress.substring(0, 20) + '...');
+    console.log('   - Vendeur:', sellerAddress);
     console.log('   - Montant:', amountAda, 'ADA');
+    console.log('   - ID Commande:', orderId);
     
     let txHash: string;
     
     try {
-      // Construire la transaction de manière simple
-      const tx = lucid
-        .newTx()
-        .payToAddress(sellerAddress, { lovelace: amountLovelace });
+      // Utiliser lockFundsInEscrow pour verrouiller les fonds dans le smart contract
+      console.log('⚙️ Préparation de la transaction escrow (calcul des frais, sélection des UTXOs)...');
       
-      // Compléter la transaction (calcule les frais, sélectionne les UTXOs, etc.)
-      console.log('⚙️ Préparation de la transaction (calcul des frais, sélection des UTXOs)...');
-      const completedTx = await tx.complete();
+      // Définir le délai (7 jours par défaut)
+      const deadline = Date.now() + 7 * 24 * 60 * 60 * 1000;
       
-      // Afficher les informations de la transaction complétée
-      console.log('📄 Transaction préparée. Détails:');
-      console.log('   - Frais estimés:', completedTx.fee ? (Number(completedTx.fee) / 1_000_000).toFixed(6) + ' ADA' : 'calcul en cours...');
+      const escrowResult = await lockFundsInEscrow(
+        orderId,
+        amountAda,
+        buyerAddress,
+        sellerAddress,
+        deadline,
+        lucid
+      );
       
-      // Signer la transaction (le wallet demandera confirmation à l'utilisateur)
-      console.log('📝 Signature de la transaction en cours...');
-      console.log('⚠️ IMPORTANT: Votre wallet va ouvrir une popup. Veuillez:');
-      console.log('   1. Vérifier le montant et le destinataire');
-      console.log('   2. Cliquer sur "Approuver" ou "Sign" dans votre wallet');
-      console.log('   3. NE PAS cliquer sur "Annuler" ou "Reject"');
-      
-      const signedTx = await completedTx.sign().complete();
-      console.log('✅ Transaction signée par le wallet');
-
-      // Envoyer la transaction
-      console.log('📤 Envoi de la transaction sur la blockchain Preprod...');
-      txHash = await signedTx.submit();
-      console.log('✅ Transaction soumise avec succès sur la blockchain');
+      txHash = escrowResult.txHash;
+      console.log('✅ Transaction escrow soumise avec succès sur la blockchain');
       console.log('📋 Hash de transaction:', txHash);
+      console.log('📍 Adresse escrow:', escrowResult.escrowAddress);
       
-      // Attendre un peu pour que la transaction soit propagée
-      console.log('⏳ Attente de la propagation de la transaction...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    } catch (signError: any) {
+    } catch (escrowError: any) {
       // Gérer spécifiquement les erreurs de signature
-      if (signError.message?.includes('declined') || signError.message?.includes('user declined') || signError.message?.includes('rejected')) {
+      if (escrowError.message?.includes('declined') || escrowError.message?.includes('user declined') || escrowError.message?.includes('rejected')) {
         console.error('❌ Transaction refusée par l\'utilisateur dans le wallet');
         throw new Error('Transaction annulée. Vous avez refusé de signer la transaction dans votre wallet. Veuillez approuver la transaction lorsque votre wallet vous le demande.');
       }
-      throw signError;
+      console.error('❌ Erreur lors de la création de la transaction escrow:', escrowError);
+      throw escrowError;
     }
 
     // Déterminer le réseau

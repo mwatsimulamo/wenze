@@ -1,0 +1,6 @@
+{
+  "type": "PlutusScriptV2",
+  "description": "Escrow test contract - AlwaysSucceeds for V2 compatibility test",
+  "cborHex": "49480100002221200101",
+  "note": "This is a simple AlwaysSucceeds script for testing V2 compatibility with lucid-cardano"
+}

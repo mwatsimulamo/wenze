@@ -65,3 +65,8 @@ const releaseTxHash = await releaseFundsFromEscrow(
 - **Redeemer "release"** : Libère les fonds au vendeur (doit être signé par l'acheteur)
 - **Redeemer "cancel"** : Annule l'escrow et rembourse l'acheteur (si délai expiré)
 
+
+
+
+
+

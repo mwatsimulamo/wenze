@@ -1,0 +1,48 @@
+================================================================================
+  GUIDE D'INSTALLATION MANUELLE D'AIKEN - WINDOWS
+================================================================================
+
+ETAPE 1 : TELECHARGER
+----------------------
+1. Allez sur : https://github.com/aiken-lang/aiken/releases
+2. Telechargez le fichier Windows : aiken-X.X.X-x86_64-pc-windows-msvc.zip
+
+ETAPE 2 : EXTRAIRE
+------------------
+1. Clic droit sur le ZIP → Extraire tout
+2. Notez ou se trouve le dossier extrait
+
+ETAPE 3 : CREER LE DOSSIER
+---------------------------
+1. Creez : C:\Tools\Aiken\
+   (Si Tools n'existe pas, creez-le d'abord)
+
+ETAPE 4 : COPIER AIKEN.EXE
+---------------------------
+1. Dans le dossier extrait, trouvez aiken.exe
+2. Copiez aiken.exe dans C:\Tools\Aiken\
+
+ETAPE 5 : AJOUTER AU PATH
+--------------------------
+1. Windows + R → tapez : sysdm.cpl → Entree
+2. Onglet "Avance" → Variables d'environnement
+3. Dans "Variables utilisateur", selectionnez "Path" → Modifier
+4. Nouveau → Tapez : C:\Tools\Aiken
+5. OK partout
+
+ETAPE 6 : VERIFIER
+-------------------
+1. FERMEZ et ROUVREZ votre terminal
+2. Tapez : aiken --version
+3. Si vous voyez la version, c'est installe !
+
+ETAPE 7 : COMPILER LE CONTRAT
+------------------------------
+cd C:\Users\PC\wenze\frontend\contracts\escrow
+aiken build
+
+================================================================================
+IMPORTANT : Apres l'installation, FERMEZ et ROUVREZ votre terminal !
+================================================================================
+
+

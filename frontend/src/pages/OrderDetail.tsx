@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ChatBox from '../components/ChatBox';
-import { prepareAdaRelease } from '../blockchain/prepareAdaRelease';
+import { prepareAdaRelease, ReleaseResult } from '../blockchain/prepareAdaRelease';
 import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { useToast } from '../components/Toast';
 import { useBlockchain } from '../context/BlockchainContext';
@@ -88,9 +88,57 @@ const OrderDetail = () => {
     if (!error) {
         fetchOrder();
         
-        // Simuler la libération des fonds si complété
+        // Libérer les fonds de l'escrow si complété
         if (newStatus === 'completed') {
-            await prepareAdaRelease(id!);
+            // Récupérer l'adresse du vendeur pour libérer les fonds
+            const sellerAddress = getSellerAddress();
+            
+            if (!sellerAddress) {
+              toast.error(
+                'Erreur', 
+                'Impossible de libérer les fonds : adresse du vendeur introuvable. Le vendeur doit connecter son wallet.'
+              );
+              // Annuler la mise à jour du statut
+              fetchOrder();
+              return;
+            }
+
+            // Vérifier que Lucid est disponible
+            if (!lucid) {
+              toast.error(
+                'Erreur', 
+                'Impossible de libérer les fonds : Lucid n\'est pas initialisé. Vérifiez votre connexion.'
+              );
+              fetchOrder();
+              return;
+            }
+
+            try {
+              // Libérer les fonds de l'escrow
+              const releaseResult: ReleaseResult = await prepareAdaRelease(id!, sellerAddress, lucid);
+              
+              if (!releaseResult.success) {
+                toast.error('Erreur de libération', releaseResult.message);
+                // Annuler la mise à jour du statut si la libération a échoué
+                fetchOrder();
+                return;
+              }
+
+              toast.success(
+                'Fonds libérés !', 
+                releaseResult.message + (releaseResult.explorerUrl ? ` Hash: ${releaseResult.txHash?.substring(0, 16)}...` : '')
+              );
+              
+              if (releaseResult.explorerUrl) {
+                console.log('🔗 Explorateur:', releaseResult.explorerUrl);
+              }
+            } catch (error: any) {
+              console.error('Erreur lors de la libération des fonds:', error);
+              toast.error('Erreur de libération', error.message || 'Une erreur est survenue lors de la libération des fonds.');
+              // Annuler la mise à jour du statut
+              fetchOrder();
+              return;
+            }
             
             // Marquer le produit comme vendu (retirer du marché)
             if (order?.product_id) {

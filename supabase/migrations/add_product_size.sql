@@ -23,3 +23,8 @@ COMMENT ON COLUMN products.size IS 'Size of the product (for fashion category on
 
 
 
+
+
+
+
+

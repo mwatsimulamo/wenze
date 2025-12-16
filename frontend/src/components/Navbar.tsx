@@ -22,8 +22,12 @@ import {
   Sun,
   Moon,
   Languages,
+  Phone,
+  MessageCircle,
+  ExternalLink,
 } from "lucide-react";
 import WalletModal, { WalletData } from "./WalletModal";
+import ExchangeOperators from "./ExchangeOperators";
 import { logger } from "../utils/logger";
 
 interface Profile {
@@ -42,6 +46,7 @@ const Navbar = () => {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -335,17 +340,8 @@ const Navbar = () => {
 
               {user ? (
                 <div className="flex items-center space-x-3 ml-4">
-                  {/* AdaEx Exchange Button */}
-                  <a
-                    href="https://app.adaex.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition shadow-sm bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
-                    title="Échanger ADA ↔ FC via Momo"
-                  >
-                    <ArrowLeftRight size={16} />
-                    <span className="hidden lg:inline">ADA ↔ FC</span>
-                  </a>
+                  {/* Exchange Operators Button */}
+                  <ExchangeOperators variant="button" />
 
                   {/* Wallet Button */}
                   {connectedWallet ? (
@@ -677,24 +673,24 @@ const Navbar = () => {
                       Wallet & Échange
                     </h3>
 
-                    {/* AdaEx Exchange Button Mobile */}
-                    <a
-                      href="https://app.adaex.app/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 text-left font-medium text-orange-600 dark:text-orange-400 active:bg-orange-100 dark:active:bg-orange-900/30 transition"
+                    {/* Exchange Operators Button Mobile */}
+                    <button
+                      onClick={() => {
+                        setShowExchangeModal(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 text-left font-medium text-orange-600 dark:text-orange-400 active:bg-orange-100 dark:active:bg-orange-900/30 transition"
                     >
                       <ArrowLeftRight size={22} />
                       <div className="flex-1">
                         <span className="block font-semibold">
-                          Échanger ADA ↔ FC
+                          {language === 'fr' ? 'Échanger ADA ↔ FC' : 'Badilisha ADA ↔ FC'}
                         </span>
                         <span className="text-xs text-orange-500 dark:text-orange-400">
-                          Via Mobile Money
+                          {language === 'fr' ? 'Opérateurs disponibles' : 'Waendeshaji walio nao'}
                         </span>
                       </div>
-                    </a>
+                    </button>
 
                     {/* Mobile Wallet Section */}
                     {connectedWallet ? (
@@ -871,14 +867,167 @@ const Navbar = () => {
         onConnect={handleWalletConnect}
       />
 
+      {/* Exchange Operators Modal (for mobile) */}
+      {showExchangeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm md:hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    {language === 'fr' ? 'Opérateurs d\'Échange' : 'Waendeshaji wa Ubadilishaji'}
+                  </h2>
+                  <p className="text-orange-100 text-sm mt-1">
+                    {language === 'fr' 
+                      ? 'Choisissez un opérateur pour échanger ADA ↔ FC' 
+                      : 'Chagua mwendeshaji kubadilisha ADA ↔ FC'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowExchangeModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Operators List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* AdaEx */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">AdaEx</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {language === 'fr' 
+                        ? 'Plateforme en ligne pour échanger ADA ↔ FC via Mobile Money'
+                        : 'Jukwaa la mtandaoni la kubadilisha ADA ↔ FC kupitia Mobile Money'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">
+                    {language === 'fr' ? 'En ligne' : 'Mtandaoni'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    window.open('https://app.adaex.app/', '_blank', 'noopener,noreferrer');
+                    setShowExchangeModal(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition text-sm font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {language === 'fr' ? 'Ouvrir le site' : 'Fungua tovuti'}
+                </button>
+              </div>
+
+              {/* Yann Exchange */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Yann Exchange</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {language === 'fr' 
+                        ? 'Opérateur local - Réponse instantanée via WhatsApp ou Appel'
+                        : 'Mwendeshaji wa ndani - Jibu la papo hapo kupitia WhatsApp au Simu'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-full">
+                    {language === 'fr' ? 'Local' : 'Ndani'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      const message = language === 'fr' 
+                        ? 'Bonjour, je souhaite échanger des ADA contre des FC via WENZE.'
+                        : 'Hujambo, nataka kubadilisha ADA na FC kupitia WENZE.';
+                      window.open(`https://wa.me/243999320786?text=${encodeURIComponent(message)}`, '_blank');
+                      setShowExchangeModal(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition text-sm font-medium"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    WhatsApp
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.href = 'tel:+243999320786';
+                      setShowExchangeModal(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg transition text-sm font-medium"
+                  >
+                    <Phone className="w-4 h-4" />
+                    +243 999320786
+                  </button>
+                </div>
+              </div>
+
+              {/* Jules Exchange */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Jules Exchange</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {language === 'fr' 
+                        ? 'Opérateur local - Réponse instantanée via WhatsApp ou Appel'
+                        : 'Mwendeshaji wa ndani - Jibu la papo hapo kupitia WhatsApp au Simu'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-full">
+                    {language === 'fr' ? 'Local' : 'Ndani'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      const message = language === 'fr' 
+                        ? 'Bonjour, je souhaite échanger des ADA contre des FC via WENZE.'
+                        : 'Hujambo, nataka kubadilisha ADA na FC kupitia WENZE.';
+                      window.open(`https://wa.me/243970204238?text=${encodeURIComponent(message)}`, '_blank');
+                      setShowExchangeModal(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition text-sm font-medium"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    WhatsApp
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.href = 'tel:+243970204238';
+                      setShowExchangeModal(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-600 text-white rounded-lg transition text-sm font-medium"
+                  >
+                    <Phone className="w-4 h-4" />
+                    +243 970204238
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                {language === 'fr' 
+                  ? '💡 Les opérateurs locaux répondent généralement en quelques minutes'
+                  : '💡 Waendeshaji wa ndani hujibu kwa kawaida ndani ya dakika chache'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Click outside to close dropdowns */}
-      {(showWalletDropdown || showProfileDropdown || showLangDropdown) && (
+      {(showWalletDropdown || showProfileDropdown || showLangDropdown || showExchangeModal) && (
         <div
-          className="fixed inset-0 z-30"
+          className="fixed inset-0 z-30 md:z-30"
           onClick={() => {
             setShowWalletDropdown(false);
             setShowProfileDropdown(false);
             setShowLangDropdown(false);
+            setShowExchangeModal(false);
           }}
         />
       )}
