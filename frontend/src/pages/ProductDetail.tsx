@@ -28,7 +28,11 @@ import {
   AlertCircle,
   TrendingDown,
   Info,
-  Sparkles
+  Sparkles,
+  Hand,
+  Pin,
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 
 interface Product {
@@ -345,7 +349,7 @@ const ProductDetail = () => {
         .insert([{
           order_id: orderData.id,
           sender_id: user.id,
-          content: `💰 Nouvelle proposition de prix : ${formatFC(proposedPriceFC)} FC (≈ ${formatADA(proposedPriceADA)} ADA)`
+          content: `Nouvelle proposition de prix : ${formatFC(proposedPriceFC)} FC (≈ ${formatADA(proposedPriceADA)} ADA)`
         }]);
 
       toast.success('Proposition envoyée !', 'Le vendeur a été notifié de votre proposition.');
@@ -860,10 +864,10 @@ const ProductDetail = () => {
                 {product.contact_whatsapp && (
                   <a
                     href={`https://wa.me/${product.contact_whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                      `👋 Bonjour ${product.profiles?.full_name || ''}!\n\n` +
+                      `Bonjour ${product.profiles?.full_name || ''}!\n\n` +
                       `Je vous contacte depuis Wenze concernant:\n` +
-                      `📌 "${product.title}"\n` +
-                      `💰 Prix: ${formatFC(getPriceInFC(product))} FC (≈ ${formatADA(getCurrentPriceInADA(product))} ADA)\n\n` +
+                      `"${product.title}"\n` +
+                      `Prix: ${formatFC(getPriceInFC(product))} FC (≈ ${formatADA(getCurrentPriceInADA(product))} ADA)\n\n` +
                       `Je souhaiterais avoir plus d'informations. Merci!`
                     )}`}
                     target="_blank"
@@ -887,8 +891,8 @@ const ProductDetail = () => {
                     )}&body=${encodeURIComponent(
                       `Bonjour ${product.profiles?.full_name || ''},\n\n` +
                       `Je vous contacte via la plateforme Wenze concernant:\n\n` +
-                      `📌 "${product.title}"\n` +
-                      `💰 Prix: ${formatFC(getPriceInFC(product))} FC (≈ ${formatADA(getCurrentPriceInADA(product))} ADA)\n\n` +
+                      `"${product.title}"\n` +
+                      `Prix: ${formatFC(getPriceInFC(product))} FC (≈ ${formatADA(getCurrentPriceInADA(product))} ADA)\n\n` +
                       `Je souhaiterais avoir plus d'informations. Merci de votre retour!\n\n` +
                       `Cordialement`
                     )}`}
@@ -913,8 +917,9 @@ const ProductDetail = () => {
               </Link>
 
               {/* Warning */}
-              <p className="text-[10px] text-center text-amber-600 bg-amber-50 py-2 px-3 rounded-lg">
-                ⚠️ Service sans protection escrow - Vérifiez la fiabilité du prestataire
+              <p className="text-[10px] text-center text-amber-600 bg-amber-50 py-2 px-3 rounded-lg flex items-center justify-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Service sans protection escrow - Vérifiez la fiabilité du prestataire
               </p>
             </div>
           </div>

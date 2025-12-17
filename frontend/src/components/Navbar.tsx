@@ -25,6 +25,7 @@ import {
   Phone,
   MessageCircle,
   ExternalLink,
+  Lightbulb,
 } from "lucide-react";
 import WalletModal, { WalletData } from "./WalletModal";
 import ExchangeOperators from "./ExchangeOperators";
@@ -303,7 +304,7 @@ const Navbar = () => {
                           : "text-gray-700 dark:text-gray-200"
                       }`}
                     >
-                      <span className="text-lg">🇫🇷</span>
+                      <span className="text-sm font-semibold">FR</span>
                       <span>Français</span>
                     </button>
                     <button
@@ -317,7 +318,7 @@ const Navbar = () => {
                           : "text-gray-700 dark:text-gray-200"
                       }`}
                     >
-                      <span className="text-lg">🇨🇩</span>
+                      <span className="text-sm font-semibold">SW</span>
                       <span>Kiswahili (DRC)</span>
                     </button>
                   </div>
@@ -774,7 +775,7 @@ const Navbar = () => {
                           : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                       }`}
                     >
-                      🇫🇷 FR
+                      FR
                     </button>
                     <button
                       onClick={() => {
@@ -787,7 +788,7 @@ const Navbar = () => {
                           : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                       }`}
                     >
-                      🇨🇩 SW
+                      SW
                     </button>
                   </div>
                 </div>
@@ -1009,10 +1010,11 @@ const Navbar = () => {
 
             {/* Footer */}
             <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
-              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
+                <Lightbulb className="w-3.5 h-3.5" />
                 {language === 'fr' 
-                  ? '💡 Les opérateurs locaux répondent généralement en quelques minutes'
-                  : '💡 Waendeshaji wa ndani hujibu kwa kawaida ndani ya dakika chache'}
+                  ? 'Les opérateurs locaux répondent généralement en quelques minutes'
+                  : 'Waendeshaji wa ndani hujibu kwa kawaida ndani ya dakika chache'}
               </p>
             </div>
           </div>

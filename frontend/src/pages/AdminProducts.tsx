@@ -400,8 +400,9 @@ const AdminProducts = () => {
               <p className="text-sm text-amber-800 mt-1">
                 <strong>Vendeur:</strong> {showDeleteConfirm.sellerName}
               </p>
-              <p className="text-xs text-amber-700 mt-2">
-                ⚠️ Toutes les commandes, messages et ratings associés seront également supprimés.
+              <p className="text-xs text-amber-700 mt-2 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>Toutes les commandes, messages et ratings associés seront également supprimés.</span>
               </p>
             </div>
 
@@ -454,8 +455,9 @@ const AdminProducts = () => {
             />
 
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-              <p className="text-xs text-red-700">
-                ⚠️ Tous les produits, commandes, messages et ratings de ce vendeur seront supprimés définitivement.
+              <p className="text-xs text-red-700 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>Tous les produits, commandes, messages et ratings de ce vendeur seront supprimés définitivement.</span>
               </p>
             </div>
 

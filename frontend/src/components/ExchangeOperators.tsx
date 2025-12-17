@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { ArrowLeftRight, Phone, MessageCircle, ExternalLink, X, ChevronDown } from 'lucide-react';
+import { ArrowLeftRight, Phone, MessageCircle, ExternalLink, X, ChevronDown, Lightbulb } from 'lucide-react';
 
 interface ExchangeOperator {
   id: string;
@@ -200,10 +200,11 @@ const ExchangeOperators: React.FC<ExchangeOperatorsProps> = ({
 
               {/* Footer */}
               <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
-                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5" />
                   {language === 'fr' 
-                    ? '💡 Les opérateurs locaux répondent généralement en quelques minutes'
-                    : '💡 Waendeshaji wa ndani hujibu kwa kawaida ndani ya dakika chache'}
+                    ? 'Les opérateurs locaux répondent généralement en quelques minutes'
+                    : 'Waendeshaji wa ndani hujibu kwa kawaida ndani ya dakika chache'}
                 </p>
               </div>
             </div>
@@ -319,8 +320,8 @@ const ExchangeOperators: React.FC<ExchangeOperatorsProps> = ({
             <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-900">
               <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                 {language === 'fr' 
-                  ? '💡 Réponses instantanées'
-                  : '💡 Majibu ya papo hapo'}
+                  ? 'Réponses instantanées'
+                  : 'Majibu ya papo hapo'}
               </p>
             </div>
           </div>

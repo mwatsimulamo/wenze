@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { convertFCToADA, formatADA, formatFC, getExchangeRate } from '../utils/currencyConverter';
-import { Camera, Upload, ArrowLeft, Package, DollarSign, Tag, FileText, Ruler, Phone, Mail, Shirt, Footprints, TrendingUp } from 'lucide-react';
+import { Camera, Upload, ArrowLeft, Package, DollarSign, Tag, FileText, Ruler, Phone, Mail, Shirt, Footprints, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
@@ -515,8 +515,9 @@ const CreateProduct = () => {
                   />
                 </div>
 
-                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                  ⚠️ Cette catégorie n'utilise pas l'escrow. Les acheteurs vous contacteront directement.
+                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Cette catégorie n'utilise pas l'escrow. Les acheteurs vous contacteront directement.</span>
                 </p>
               </div>
             )}

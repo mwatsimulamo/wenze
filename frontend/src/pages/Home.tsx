@@ -8,6 +8,12 @@ import {
   CheckCircle,
   Star,
   TrendingUp,
+  Smartphone,
+  Shirt,
+  UtensilsCrossed,
+  Wand2,
+  Hammer,
+  Briefcase,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
@@ -84,12 +90,12 @@ const Home = () => {
   };
 
   const categories = [
-    { id: "electronics", name: "Électronique", icon: "📱", color: "bg-blue-500" },
-    { id: "fashion", name: "Mode", icon: "👕", color: "bg-pink-500" },
-    { id: "food", name: "Aliments", icon: "🍔", color: "bg-orange-500" },
-    { id: "beauty", name: "Beauté", icon: "💄", color: "bg-purple-500" },
-    { id: "diy", name: "Bricolage", icon: "🔨", color: "bg-yellow-500" },
-    { id: "service", name: "Services", icon: "💼", color: "bg-green-500" },
+    { id: "electronics", name: "Électronique", icon: Smartphone, color: "bg-blue-500" },
+    { id: "fashion", name: "Mode", icon: Shirt, color: "bg-pink-500" },
+    { id: "food", name: "Aliments", icon: UtensilsCrossed, color: "bg-orange-500" },
+    { id: "beauty", name: "Beauté", icon: Wand2, color: "bg-purple-500" },
+    { id: "diy", name: "Bricolage", icon: Hammer, color: "bg-yellow-500" },
+    { id: "service", name: "Services", icon: Briefcase, color: "bg-green-500" },
   ];
 
   return (
@@ -237,8 +243,8 @@ const Home = () => {
               to={`/products?category=${category.id}`}
               className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 text-center hover:border-primary hover:shadow-lg transition-all duration-300"
             >
-              <div className={`w-16 h-16 ${category.color} rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 group-hover:scale-110 transition-transform`}>
-                {category.icon}
+              <div className={`w-16 h-16 ${category.color} rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+                <category.icon className="w-8 h-8 text-white" />
               </div>
               <div className="font-semibold text-slate-900 dark:text-white">
                 {category.name}

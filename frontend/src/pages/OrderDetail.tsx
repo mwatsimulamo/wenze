@@ -9,7 +9,7 @@ import { useToast } from '../components/Toast';
 import { useBlockchain } from '../context/BlockchainContext';
 import { convertFCToADA, convertADAToFC, formatFC, formatADA } from '../utils/currencyConverter';
 import { distributeWZPAfterTransaction } from '../utils/distributeWZP';
-import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon, Clock, Info, ExternalLink } from 'lucide-react';
+import { CheckCircle, X, DollarSign, ShoppingCart, AlertCircle, MessageSquare, TrendingDown, RotateCcw, Smartphone, Clock as ClockIcon, Clock, Info, ExternalLink, Lightbulb, ClipboardList, Hourglass } from 'lucide-react';
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -246,7 +246,7 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: `✅ Proposition acceptée ! Le prix final est de ${formatADA(finalPrice)} ADA. Vous pouvez maintenant procéder au paiement.`
+          content: `Proposition acceptée ! Le prix final est de ${formatADA(finalPrice)} ADA. Vous pouvez maintenant procéder au paiement.`
         }]);
 
       toast.success('Proposition acceptée !', 'L\'acheteur a été notifié et peut maintenant payer.');
@@ -285,7 +285,7 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: '❌ Proposition refusée. N\'hésitez pas à discuter avec moi dans le chat ou à proposer un nouveau prix !'
+          content: 'Proposition refusée. N\'hésitez pas à discuter avec moi dans le chat ou à proposer un nouveau prix !'
         }]);
 
       toast.info('Proposition refusée', 'L\'acheteur peut maintenant proposer un nouveau prix ou discuter avec vous.');
@@ -380,7 +380,7 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: `💰 Paiement effectué ! ${formatFC(priceInFC)} FC (≈ ${formatADA(priceToPay)} ADA) sont maintenant en escrow. Veuillez confirmer la commande.`
+          content: `Paiement effectué ! ${formatFC(priceInFC)} FC (≈ ${formatADA(priceToPay)} ADA) sont maintenant en escrow. Veuillez confirmer la commande.`
         }]);
 
       toast.success('Paiement effectué !', `Le vendeur a été notifié que ${formatFC(priceInFC)} FC sont en escrow.`);
@@ -435,7 +435,7 @@ const OrderDetail = () => {
         .insert([{
           order_id: id!,
           sender_id: user.id,
-          content: `💰 Nouvelle proposition de prix : ${formatFC(proposedPriceFC)} FC (≈ ${formatADA(proposedPriceADA)} ADA)`
+          content: `Nouvelle proposition de prix : ${formatFC(proposedPriceFC)} FC (≈ ${formatADA(proposedPriceADA)} ADA)`
         }]);
 
       toast.success('Nouvelle proposition envoyée !', 'Le vendeur a été notifié de votre nouvelle proposition.');
@@ -573,8 +573,9 @@ const OrderDetail = () => {
                                         </a>
                                     </div>
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                    💡 Cette transaction devrait apparaître dans votre wallet sous peu. Si elle n'apparaît pas après quelques minutes, vérifiez l'explorateur Cardano ci-dessus.
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-start gap-1.5">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                    <span>Cette transaction devrait apparaître dans votre wallet sous peu. Si elle n'apparaît pas après quelques minutes, vérifiez l'explorateur Cardano ci-dessus.</span>
                                 </p>
                             </div>
                         </div>
@@ -590,8 +591,9 @@ const OrderDetail = () => {
                 {order.order_mode === 'negotiation' && (
                     <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-5 rounded-xl border-2 border-blue-200 dark:border-blue-800">
                         <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-bold text-blue-900 dark:text-blue-100 text-sm uppercase tracking-wide">
-                                📋 Flux de négociation
+                            <h4 className="font-bold text-blue-900 dark:text-blue-100 text-sm uppercase tracking-wide flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" />
+                                Flux de négociation
                             </h4>
                         </div>
                         <div className="flex items-center justify-between gap-2 text-xs">
@@ -670,8 +672,9 @@ const OrderDetail = () => {
                                 <MessageSquare className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-1">
-                                    💰 Nouvelle proposition de prix
+                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-1 flex items-center gap-2">
+                                    <DollarSign className="w-5 h-5" />
+                                    Nouvelle proposition de prix
                                 </h4>
                                 <p className="text-sm text-amber-700 dark:text-amber-300">
                                     L'acheteur vous propose un nouveau prix. Décidez rapidement !
@@ -753,8 +756,9 @@ const OrderDetail = () => {
                                 <CheckCircle className="w-7 h-7 text-white" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-green-900 dark:text-green-100 text-lg mb-1">
-                                    ✅ Proposition acceptée !
+                                <h4 className="font-bold text-green-900 dark:text-green-100 text-lg mb-1 flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5" />
+                                    Proposition acceptée !
                                 </h4>
                                 <p className="text-sm text-green-700 dark:text-green-300">
                                     Excellent ! Le vendeur a accepté votre proposition. Procédez maintenant au paiement sécurisé.
@@ -830,8 +834,9 @@ const OrderDetail = () => {
                                 <X className="w-7 h-7 text-white" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-red-900 dark:text-red-100 text-lg mb-2">
-                                    ❌ Proposition refusée
+                                <h4 className="font-bold text-red-900 dark:text-red-100 text-lg mb-2 flex items-center gap-2">
+                                    <X className="w-5 h-5" />
+                                    Proposition refusée
                                 </h4>
                                 <p className="text-sm text-red-700 dark:text-red-300 mb-1">
                                     Le vendeur n'a pas accepté cette proposition. Pas de problème, vous pouvez :
@@ -978,16 +983,18 @@ const OrderDetail = () => {
                                 <Clock className="w-7 h-7 text-white" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-2">
-                                    ⏳ En attente de réponse
+                                <h4 className="font-bold text-amber-900 dark:text-amber-100 text-lg mb-2 flex items-center gap-2">
+                                    <Hourglass className="w-5 h-5" />
+                                    En attente de réponse
                                 </h4>
                                 <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
                                     Votre proposition de <strong>{formatADA(order.proposed_price)} ADA</strong> a été envoyée au vendeur. 
                                     Il examinera votre offre et vous répondra bientôt.
                                 </p>
                                 <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg border border-amber-200 dark:border-amber-700">
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                        💡 Astuce : Vous pouvez discuter avec le vendeur dans le chat pour négocier davantage !
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-start gap-1.5">
+                                        <Lightbulb className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                        <span>Astuce : Vous pouvez discuter avec le vendeur dans le chat pour négocier davantage !</span>
                                     </p>
                                 </div>
                             </div>

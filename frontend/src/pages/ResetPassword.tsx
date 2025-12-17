@@ -240,7 +240,10 @@ const ResetPassword = () => {
           ) : (
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-700">
-                <p className="font-medium mb-1">✅ Succès !</p>
+                <p className="font-medium mb-1 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Succès !
+                </p>
                 <p>Vous allez être redirigé vers la page de connexion dans quelques secondes...</p>
               </div>
 
