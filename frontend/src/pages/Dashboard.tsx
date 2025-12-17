@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { logger } from '../utils/logger';
 import { getWZPTotal } from '../utils/getWZPTotal';
-import ExchangeOperators from '../components/ExchangeOperators';
+import { convertADAToFC, formatFC } from '../utils/currencyConverter';
 import { 
   Package,
   ShoppingCart,
@@ -15,8 +15,11 @@ import {
   AlertCircle,
   ArrowRight,
   TrendingUp,
-  ArrowLeftRight,
-  Award
+  Award,
+  DollarSign,
+  Activity,
+  BarChart3,
+  Sparkles
 } from 'lucide-react';
 
 interface Order {
@@ -43,6 +46,7 @@ const Dashboard = () => {
     totalProducts: 0,
     pendingCount: 0,
     wzpTotal: 0,
+    totalRevenue: 0,
   });
 
   useEffect(() => {
@@ -53,10 +57,11 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [buyerOrders, sellerOrders, products] = await Promise.all([
+      const [buyerOrders, sellerOrders, products, revenueData] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', user?.id),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', user?.id),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('seller_id', user?.id),
+        supabase.from('orders').select('amount_ada').eq('seller_id', user?.id).eq('status', 'completed'),
       ]);
 
       const { data: ordersData } = await supabase
@@ -86,12 +91,16 @@ const Dashboard = () => {
         wzpTotal = await getWZPTotal(user.id);
       }
 
+      // Calculate total revenue
+      const totalRevenue = revenueData.data?.reduce((sum, order) => sum + (order.amount_ada || 0), 0) || 0;
+
       setStats({
         totalOrders: buyerOrders.count || 0,
         totalSales: sellerOrders.count || 0,
         totalProducts: products.count || 0,
         pendingCount: pendingCount || 0,
         wzpTotal: wzpTotal,
+        totalRevenue: totalRevenue,
       });
 
       setRecentOrders(ordersData || []);
@@ -105,11 +114,11 @@ const Dashboard = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />;
-      case 'escrow_web2': return <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />;
-      case 'shipped': return <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" />;
-      case 'completed': return <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />;
-      default: return <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />;
+      case 'pending': return <Clock className="w-4 h-4 text-amber-500" />;
+      case 'escrow_web2': return <AlertCircle className="w-4 h-4 text-blue-500" />;
+      case 'shipped': return <Truck className="w-4 h-4 text-violet-500" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      default: return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -124,245 +133,280 @@ const Dashboard = () => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-amber-50 text-amber-600 border-amber-200';
+      case 'escrow_web2': return 'bg-blue-50 text-blue-600 border-blue-200';
+      case 'shipped': return 'bg-violet-50 text-violet-600 border-violet-200';
+      case 'completed': return 'bg-green-50 text-green-600 border-green-200';
+      default: return 'bg-gray-50 text-gray-600 border-gray-200';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <svg className="animate-spin h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-4" viewBox="0 0 24 24">
+          <svg className="animate-spin h-10 w-10 text-primary mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
           </svg>
-          <p className="text-gray-500 text-sm sm:text-base">Chargement...</p>
+          <p className="text-gray-500">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-1 sm:px-0">
+    <div className="max-w-7xl mx-auto px-4 lg:px-8">
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-dark">Tableau de bord</h1>
-        <p className="text-gray-500 mt-1 text-sm sm:text-base">Bienvenue, {user?.email?.split('@')[0]}</p>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
+              Tableau de bord
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              Bienvenue, <span className="font-semibold text-slate-700 dark:text-slate-300">{user?.email?.split('@')[0]}</span>
+            </p>
+          </div>
+          <Link
+            to="/products/new"
+            className="hidden md:flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary/20"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Vendre un produit
+          </Link>
+        </div>
       </div>
 
-      {/* Quick Actions - 2x2 Grid on Mobile, 4 cols on Desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {/* Vendre */}
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Link
           to="/products/new"
-          className="group aspect-square sm:aspect-auto flex flex-col items-center justify-center sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 sm:p-5 bg-gradient-to-br from-blue-400 to-primary rounded-3xl text-white shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all active:scale-[0.97] sm:hover:-translate-y-1"
+          className="group bg-gradient-to-br from-blue-500 to-primary rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1"
         >
-          <div className="w-14 h-14 sm:w-12 sm:h-12 bg-white/20 backdrop-blur rounded-2xl sm:rounded-xl flex items-center justify-center">
-            <PlusCircle className="w-7 h-7 sm:w-6 sm:h-6" />
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <PlusCircle className="w-6 h-6" />
           </div>
-          <div className="text-center sm:text-left">
-            <p className="text-base sm:text-lg font-bold">Vendre</p>
-            <p className="text-blue-100 text-[10px] sm:text-xs hidden sm:block">Ajouter un produit</p>
-          </div>
+          <h3 className="font-bold text-lg mb-1">Vendre</h3>
+          <p className="text-blue-100 text-sm">Ajouter un produit</p>
         </Link>
 
-        {/* Acheter */}
         <Link
           to="/products"
-          className="group aspect-square sm:aspect-auto flex flex-col items-center justify-center sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 sm:p-5 bg-gradient-to-br from-emerald-400 to-green-500 rounded-3xl text-white shadow-lg shadow-green-500/10 hover:shadow-xl hover:shadow-green-500/20 transition-all active:scale-[0.97] sm:hover:-translate-y-1"
+          className="group bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 transition-all hover:-translate-y-1"
         >
-          <div className="w-14 h-14 sm:w-12 sm:h-12 bg-white/20 backdrop-blur rounded-2xl sm:rounded-xl flex items-center justify-center">
-            <ShoppingCart className="w-7 h-7 sm:w-6 sm:h-6" />
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <ShoppingCart className="w-6 h-6" />
           </div>
-          <div className="text-center sm:text-left">
-            <p className="text-base sm:text-lg font-bold">Acheter</p>
-            <p className="text-green-100 text-[10px] sm:text-xs hidden sm:block">Explorer le marché</p>
-          </div>
+          <h3 className="font-bold text-lg mb-1">Acheter</h3>
+          <p className="text-emerald-100 text-sm">Explorer le marché</p>
         </Link>
 
-        {/* Commandes */}
         <Link
           to="/orders"
-          className="group aspect-square sm:aspect-auto flex flex-col items-center justify-center sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 sm:p-5 bg-gradient-to-br from-violet-400 to-purple-500 rounded-3xl text-white shadow-lg shadow-violet-500/10 hover:shadow-xl hover:shadow-violet-500/20 transition-all active:scale-[0.97] sm:hover:-translate-y-1"
+          className="group bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 transition-all hover:-translate-y-1"
         >
-          <div className="w-14 h-14 sm:w-12 sm:h-12 bg-white/20 backdrop-blur rounded-2xl sm:rounded-xl flex items-center justify-center">
-            <Package className="w-7 h-7 sm:w-6 sm:h-6" />
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Package className="w-6 h-6" />
           </div>
-          <div className="text-center sm:text-left">
-            <p className="text-base sm:text-lg font-bold">Commandes</p>
-            <p className="text-violet-100 text-[10px] sm:text-xs hidden sm:block">Mes transactions</p>
-          </div>
+          <h3 className="font-bold text-lg mb-1">Commandes</h3>
+          <p className="text-violet-100 text-sm">Mes transactions</p>
         </Link>
 
-        {/* Exchange Operators */}
-        <ExchangeOperators variant="card" />
+        <Link
+          to="/profile"
+          className="group bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all hover:-translate-y-1"
+        >
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Award className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-lg mb-1">Profil</h3>
+          <p className="text-amber-100 text-sm">Mon compte</p>
+        </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-            <span className="text-xs sm:text-sm text-gray-500">Produits</span>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="w-5 h-5 text-primary" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Produits</span>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-dark">{stats.totalProducts}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProducts}</p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            <span className="text-xs sm:text-sm text-gray-500">Ventes</span>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-5 h-5 text-green-500" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Ventes</span>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-dark">{stats.totalSales}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalSales}</p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
-            <span className="text-xs sm:text-sm text-gray-500">Achats</span>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingCart className="w-5 h-5 text-violet-500" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Achats</span>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-dark">{stats.totalOrders}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalOrders}</p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
-            <span className="text-xs sm:text-sm text-gray-500">En attente</span>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="w-5 h-5 text-emerald-500" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Revenus</span>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-dark">{stats.pendingCount}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{formatFC(convertADAToFC(stats.totalRevenue))}</p>
+          <p className="text-xs text-slate-400 mt-1">{stats.totalRevenue.toFixed(2)} ADA</p>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 sm:p-5 border border-amber-100 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
-            <span className="text-xs sm:text-sm text-gray-600 font-medium">Points WZP</span>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-5 h-5 text-amber-500" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">En attente</span>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-amber-600">{stats.wzpTotal.toFixed(1)}</p>
-          <p className="text-[10px] sm:text-xs text-amber-600/70 mt-1">Gagnés via ADA</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.pendingCount}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-5 border border-amber-200 dark:border-amber-800 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">Points WZP</span>
+          </div>
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.wzpTotal.toFixed(1)}</p>
+          <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 mt-1">Gagnés via ADA</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Actions */}
-        {pendingActions.length > 0 && (
-          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+        {pendingActions.length > 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/20 rounded-xl flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
-                <div className="min-w-0">
-                  <h2 className="font-bold text-dark text-sm sm:text-base">Actions requises</h2>
-                  <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Commandes en attente</p>
+                <div>
+                  <h2 className="font-bold text-slate-900 dark:text-white">Actions requises</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Commandes en attente</p>
                 </div>
               </div>
-              <span className="px-2.5 py-1 bg-orange-100 text-orange-600 text-xs sm:text-sm font-medium rounded-full flex-shrink-0">
+              <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-sm font-semibold rounded-full">
                 {pendingActions.length}
               </span>
             </div>
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-200 dark:divide-slate-700">
               {pendingActions.map((order) => (
                 <Link
                   key={order.id}
                   to={`/orders/${order.id}`}
-                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 active:bg-gray-100 transition"
+                  className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
                 >
                   <img
                     src={order.products?.image_url || '/placeholder.png'}
                     alt={order.products?.title}
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0"
+                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-dark text-sm sm:text-base truncate">{order.products?.title}</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                      {getStatusIcon(order.status)}
-                      <span className="text-xs sm:text-sm text-gray-500">{getStatusLabel(order.status)}</span>
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">{order.products?.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-medium border ${getStatusColor(order.status)}`}>
+                        {getStatusIcon(order.status)}
+                        {getStatusLabel(order.status)}
+                      </span>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-dark text-sm sm:text-base">{order.amount_ada} ADA</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400">
-                      {new Date(order.created_at).toLocaleDateString('fr-FR')}
+                    <p className="font-bold text-slate-900 dark:text-white">{order.amount_ada.toFixed(2)} ADA</p>
+                    <p className="text-xs text-slate-400">
+                      {new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </p>
                   </div>
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 hidden sm:block" />
+                  <ArrowRight className="w-5 h-5 text-slate-300" />
                 </Link>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Recent Orders */}
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-violet-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-bold text-dark text-sm sm:text-base">Mes achats récents</h2>
-                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Dernières commandes</p>
-              </div>
+        ) : (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-800 p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <Link to="/orders" className="text-primary text-xs sm:text-sm font-medium hover:underline flex-shrink-0">
-              Voir tout
-            </Link>
-          </div>
-
-          {recentOrders.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {recentOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  to={`/orders/${order.id}`}
-                  className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 active:bg-gray-100 transition"
-                >
-                  <img
-                    src={order.products?.image_url || '/placeholder.png'}
-                    alt={order.products?.title}
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-dark text-sm sm:text-base truncate">{order.products?.title}</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                      {getStatusIcon(order.status)}
-                      <span className="text-xs sm:text-sm text-gray-500">{getStatusLabel(order.status)}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-dark text-sm sm:text-base">{order.amount_ada} ADA</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400">
-                      {new Date(order.created_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6 sm:p-8 text-center">
-              <ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm sm:text-base">Aucun achat pour le moment</p>
-              <Link to="/products" className="text-primary font-medium hover:underline text-xs sm:text-sm mt-2 inline-block">
-                Découvrir les produits
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Empty State for Pending Actions */}
-        {pendingActions.length === 0 && (
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl border border-green-100 p-6 sm:p-8 flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
-              <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-green-500" />
-            </div>
-            <h3 className="font-bold text-dark text-base sm:text-lg mb-2">Tout est en ordre !</h3>
-            <p className="text-gray-500 text-xs sm:text-sm">
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-2">Tout est en ordre !</h3>
+            <p className="text-slate-600 dark:text-slate-300 text-sm">
               Vous n'avez aucune action en attente.<br/>
               Vos commandes sont à jour.
             </p>
           </div>
         )}
+
+        {/* Recent Orders */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/20 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-white">Mes achats récents</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Dernières commandes</p>
+              </div>
+            </div>
+            <Link to="/orders" className="text-primary text-sm font-semibold hover:underline">
+              Voir tout
+            </Link>
+          </div>
+
+          {recentOrders.length > 0 ? (
+            <div className="divide-y divide-slate-200 dark:divide-slate-700">
+              {recentOrders.map((order) => (
+                <Link
+                  key={order.id}
+                  to={`/orders/${order.id}`}
+                  className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                >
+                  <img
+                    src={order.products?.image_url || '/placeholder.png'}
+                    alt={order.products?.title}
+                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">{order.products?.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-medium border ${getStatusColor(order.status)}`}>
+                        {getStatusIcon(order.status)}
+                        {getStatusLabel(order.status)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-slate-900 dark:text-white">{order.amount_ada.toFixed(2)} ADA</p>
+                    <p className="text-xs text-slate-400">
+                      {new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-slate-300" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <ShoppingCart className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
+              <p className="text-slate-500 dark:text-slate-400 mb-2">Aucun achat pour le moment</p>
+              <Link to="/products" className="text-primary font-semibold hover:underline text-sm">
+                Découvrir les produits
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
-

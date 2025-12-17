@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getWZPTotal } from '../utils/getWZPTotal';
+import { Link } from 'react-router-dom';
 import { 
   Camera, 
   User, 
@@ -12,9 +13,12 @@ import {
   ArrowLeft,
   Award,
   Edit3,
-  MoreVertical
+  ShieldCheck,
+  Calendar,
+  TrendingUp,
+  Package,
+  ShoppingCart
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface Profile {
   id: string;
@@ -23,6 +27,8 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  is_verified?: boolean;
+  wallet_address?: string;
 }
 
 const Profile = () => {
@@ -35,6 +41,11 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [wzpTotal, setWzpTotal] = useState<number>(0);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalSales: 0,
+    totalOrders: 0,
+  });
   
   const [form, setForm] = useState({
     full_name: '',
@@ -45,6 +56,7 @@ const Profile = () => {
     if (user) {
       fetchProfile();
       fetchWZPTotal();
+      fetchStats();
     }
   }, [user]);
 
@@ -78,6 +90,26 @@ const Profile = () => {
     if (user?.id) {
       const total = await getWZPTotal(user.id);
       setWzpTotal(total);
+    }
+  };
+
+  const fetchStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const [products, sales, orders] = await Promise.all([
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('seller_id', user.id),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', user.id).eq('status', 'completed'),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', user.id),
+      ]);
+
+      setStats({
+        totalProducts: products.count || 0,
+        totalSales: sales.count || 0,
+        totalOrders: orders.count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
     }
   };
 
@@ -149,187 +181,231 @@ const Profile = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <svg className="animate-spin h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-4" viewBox="0 0 24 24">
+          <svg className="animate-spin h-10 w-10 text-primary mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
           </svg>
-          <p className="text-gray-500 text-sm sm:text-base">Chargement...</p>
+          <p className="text-gray-500">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-1 sm:px-0">
+    <div className="max-w-4xl mx-auto px-4 lg:px-8">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link 
-            to="/dashboard" 
-            className="p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition"
-          >
-            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-dark">Mon Profil</h1>
-            <p className="text-gray-500 mt-0.5 sm:mt-1 text-sm sm:text-base">Gérez vos informations</p>
-          </div>
-        </div>
-        {/* Bouton Modifier discret */}
-        <button
-          onClick={handleSaveProfile}
-          disabled={saving}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Enregistrer les modifications"
+      <div className="mb-8">
+        <Link 
+          to="/dashboard" 
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-4 transition"
         >
-          {saving ? (
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-          ) : (
-            <>
-              <Edit3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Enregistrer</span>
-            </>
-          )}
-        </button>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Retour au tableau de bord</span>
+        </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Mon Profil</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations personnelles</p>
+          </div>
+          <button
+            onClick={handleSaveProfile}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+          >
+            {saving ? (
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Enregistrer
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Profile Card */}
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Cover & Avatar */}
-        <div className="relative">
-          <div className="h-24 sm:h-32 bg-gradient-to-r from-primary via-blue-500 to-violet-500"></div>
-          
-          <div className="absolute -bottom-12 sm:-bottom-16 left-4 sm:left-8">
-            <div className="relative">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Avatar"
-                  className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-xl object-cover bg-white"
-                />
-              ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
-                  <span className="text-4xl sm:text-5xl font-bold text-white">
-                    {form.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-              )}
-              
-              {/* Upload Button */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-lg sm:rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:bg-blue-800 transition disabled:opacity-50 text-white"
-              >
-                {uploading ? (
-                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                ) : (
-                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-                )}
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleAvatarUpload}
-                accept="image/*"
-                className="hidden"
-              />
-            </div>
-          </div>
+      {/* Success Message */}
+      {saved && (
+        <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl border border-green-200 dark:border-green-800 animate-fade-in">
+          <Check className="w-5 h-5 flex-shrink-0" />
+          <span className="font-medium">Profil mis à jour avec succès !</span>
         </div>
+      )}
 
-        {/* Form */}
-        <div className="pt-16 sm:pt-20 px-4 sm:px-8 pb-6 sm:pb-8">
-          {/* Success Message */}
-          {saved && (
-            <div className="mb-4 sm:mb-6 flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-green-50 text-green-600 rounded-lg sm:rounded-xl border border-green-100 animate-fade-in">
-              <Check className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span className="font-medium text-sm sm:text-base">Profil mis à jour !</span>
-            </div>
-          )}
-
-          <div className="space-y-4 sm:space-y-6">
-            {/* Full Name */}
-            <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                Nom complet
-              </label>
-              <input
-                type="text"
-                value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-dark text-sm sm:text-base"
-                placeholder="Votre nom complet"
-              />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <AtSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                Nom d'utilisateur
-              </label>
-              <input
-                type="text"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, '_') })}
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-dark text-sm sm:text-base"
-                placeholder="votre_pseudo"
-              />
-              <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-400">
-                Votre identifiant unique sur la plateforme
-              </p>
-            </div>
-
-            {/* Email (Read-only) */}
-            <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                Adresse email
-              </label>
-              <input
-                type="email"
-                value={user?.email || ''}
-                disabled
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-100 border border-gray-200 rounded-lg sm:rounded-xl text-gray-500 cursor-not-allowed text-sm sm:text-base"
-              />
-              <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-400">
-                L'email ne peut pas être modifié
-              </p>
-            </div>
-
-            {/* WZP Points */}
-            <div className="pt-3 sm:pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg sm:rounded-xl border border-amber-100">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-600 font-medium">Points WZP</p>
-                    <p className="text-lg sm:text-xl font-bold text-amber-600">{wzpTotal.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] sm:text-xs text-gray-500">
-                    Gagnés via transactions ADA
-                  </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card - Main */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Profile Header Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            {/* Cover */}
+            <div className="h-32 bg-gradient-to-r from-primary via-blue-500 to-violet-500 relative">
+              <div className="absolute bottom-0 left-6 transform translate-y-1/2">
+                <div className="relative">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-800 shadow-xl object-cover bg-white"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-800 shadow-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
+                      <span className="text-4xl font-bold text-white">
+                        {form.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="absolute -bottom-1 -right-1 w-10 h-10 bg-primary rounded-xl shadow-lg flex items-center justify-center hover:bg-primary-600 transition disabled:opacity-50 text-white"
+                  >
+                    {uploading ? (
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    ) : (
+                      <Camera className="w-5 h-5" />
+                    )}
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Member Since */}
-            <div className="pt-3 sm:pt-4 border-t border-gray-100">
-              <p className="text-xs sm:text-sm text-gray-500">
-                Membre depuis{' '}
-                <span className="font-medium text-dark">
+            {/* Profile Info */}
+            <div className="pt-16 pb-6 px-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {form.full_name || 'Utilisateur'}
+                </h2>
+                {profile?.is_verified && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
+                    <ShieldCheck className="w-3 h-3" />
+                    Vérifié
+                  </div>
+                )}
+              </div>
+              {profile?.username && (
+                <p className="text-slate-500 dark:text-slate-400 mb-6">@{profile.username}</p>
+              )}
+
+              {/* Form Fields */}
+              <div className="space-y-5">
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    <User className="w-4 h-4 text-slate-400" />
+                    Nom complet
+                  </label>
+                  <input
+                    type="text"
+                    value={form.full_name}
+                    onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-slate-600 transition outline-none text-slate-900 dark:text-white"
+                    placeholder="Votre nom complet"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    <AtSign className="w-4 h-4 text-slate-400" />
+                    Nom d'utilisateur
+                  </label>
+                  <input
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, '_') })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-slate-600 transition outline-none text-slate-900 dark:text-white"
+                    placeholder="votre_pseudo"
+                  />
+                  <p className="mt-2 text-xs text-slate-400">
+                    Votre identifiant unique sur la plateforme
+                  </p>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    <Mail className="w-4 h-4 text-slate-400" />
+                    Adresse email
+                  </label>
+                  <input
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                  />
+                  <p className="mt-2 text-xs text-slate-400">
+                    L'email ne peut pas être modifié
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Stats */}
+        <div className="space-y-6">
+          {/* WZP Card */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                <Award className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">Points WZP</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{wzpTotal.toFixed(2)}</p>
+              </div>
+            </div>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">
+              Gagnés via transactions ADA
+            </p>
+          </div>
+
+          {/* Stats Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="font-bold text-slate-900 dark:text-white mb-4">Statistiques</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Produits</span>
+                </div>
+                <span className="font-bold text-slate-900 dark:text-white">{stats.totalProducts}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Ventes</span>
+                </div>
+                <span className="font-bold text-slate-900 dark:text-white">{stats.totalSales}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-violet-500" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Achats</span>
+                </div>
+                <span className="font-bold text-slate-900 dark:text-white">{stats.totalOrders}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Member Since */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-slate-400" />
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Membre depuis</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   {profile?.created_at 
                     ? new Date(profile.created_at).toLocaleDateString('fr-FR', {
                         year: 'numeric',
@@ -338,8 +414,8 @@ const Profile = () => {
                       })
                     : 'récemment'
                   }
-                </span>
-              </p>
+                </p>
+              </div>
             </div>
           </div>
         </div>

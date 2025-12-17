@@ -4,16 +4,13 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { logger } from '../utils/logger';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA, getExchangeRate } from '../utils/currencyConverter';
+import ProductCard from '../components/ProductCard';
 import { 
   Search, 
   Plus, 
   ShoppingBag, 
   Sparkles,
-  Clock,
   ChevronDown,
-  MapPin,
-  Star,
-  ShoppingCart,
   Smartphone,
   Shirt,
   Laptop,
@@ -25,7 +22,6 @@ import {
   Hammer,
   Building2,
   Car,
-  MessageCircle
 } from 'lucide-react';
 
 interface Product {
@@ -380,136 +376,29 @@ const Products = () => {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-          {filteredProducts.map((product, index) => (
-            <Link
-              key={product.id}
-              to={`/products/${product.id}`}
-              className="group bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700 hover:border-primary/20 dark:hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 dark:hover:shadow-primary/20 transition-all duration-300 animate-fade-in block"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              {/* Image */}
-              <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
-                {product.image_url ? (
-                  <img 
-                    src={product.image_url} 
-                    alt={product.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ShoppingBag className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 dark:text-gray-500" />
-                  </div>
-                )}
-
-                {/* Time Badge */}
-                <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur rounded-lg text-[10px] sm:text-xs font-medium text-white">
-                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    {formatTimeAgo(product.created_at)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-3 sm:p-4">
-                {/* Seller Info - Cliquable mais sans Link imbriqué */}
-                <div 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.location.href = `/seller/${product.seller_id}`;
-                  }}
-                  className="flex items-center gap-2 mb-2 sm:mb-3 group/seller relative z-20 cursor-pointer"
-                >
-                  {product.profiles?.avatar_url ? (
-                    <img 
-                      src={product.profiles.avatar_url} 
-                      alt="" 
-                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover ring-2 ring-transparent group-hover/seller:ring-primary/30 transition"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
-                      {product.profiles?.full_name?.charAt(0) || 'V'}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium truncate group-hover/seller:text-primary transition">
-                      {product.profiles?.full_name || 'Vendeur'}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 fill-amber-400" />
-                      <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">
-                        {product.profiles?.reputation_score || 0} pts
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Title */}
-                <h3 className="font-semibold text-dark dark:text-white text-sm sm:text-base mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-tight">
-                  {product.title}
-                </h3>
-
-                {/* Location */}
-                <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500 mb-2 sm:mb-3">
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="text-[10px] sm:text-xs truncate">{product.location || 'Goma, RDC'}</span>
-                </div>
-
-                {/* Price & Action */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex flex-col">
-                    {(() => {
-                      // Utiliser price_fc si disponible (prioritaire), sinon convertir depuis price_ada
-                      const priceInFC = product.price_fc || convertADAToFC(product.price_ada);
-                      // Recalculer l'ADA depuis le FC avec le taux actuel
-                      const priceInADA = convertFCToADA(priceInFC);
-                      
-                      return (
-                        <>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-base sm:text-lg font-bold text-dark dark:text-white">
-                              {formatFC(priceInFC)}
-                            </span>
-                            <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">FC</span>
-                          </div>
-                          <span className="text-[9px] text-gray-400 dark:text-gray-500">
-                            ≈ {formatADA(priceInADA)} ADA
-                          </span>
-                        </>
-                      );
-                    })()}
-                  </div>
-                  
-                  {NO_ESCROW_CATEGORIES.includes(product.category) ? (
-                    <div 
-                      className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-500 text-white text-[10px] sm:text-xs font-semibold rounded-lg sm:rounded-xl hover:bg-green-600 active:scale-95 transition relative z-20"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.location.href = `/products/${product.id}`;
-                      }}
-                    >
-                      <MessageCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span className="hidden sm:inline">Contacter</span>
-                    </div>
-                  ) : (
-                    <div 
-                      className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-primary text-white text-[10px] sm:text-xs font-semibold rounded-lg sm:rounded-xl hover:bg-blue-700 active:scale-95 transition relative z-20"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.location.href = `/products/${product.id}`;
-                      }}
-                    >
-                      <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span className="hidden sm:inline">Acheter</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
+          {filteredProducts.map((product, index) => {
+            const daysSinceCreation = Math.floor(
+              (Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            const isNew = daysSinceCreation <= 7;
+            
+            return (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                title={product.title}
+                image_url={product.image_url}
+                price_ada={product.price_ada}
+                price_fc={product.price_fc}
+                location={product.location}
+                category={product.category}
+                created_at={product.created_at}
+                seller={product.profiles}
+                isNew={isNew}
+                isTrending={index < 4}
+              />
+            );
+          })}
         </div>
       )}
 

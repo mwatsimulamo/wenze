@@ -7,32 +7,28 @@ import { prepareAdaPayment } from '../blockchain/prepareAdaPayment';
 import { convertADAToFC, convertFCToADA, formatFC, formatADA } from '../utils/currencyConverter';
 import { useBlockchain } from '../context/BlockchainContext';
 import { distributeWZPAfterTransaction } from '../utils/distributeWZP';
+import ImageGallery from '../components/ImageGallery';
+import ProductCard from '../components/ProductCard';
 import { 
   ArrowLeft, 
   MapPin, 
   Clock, 
   Star, 
-  Shield, 
+  ShieldCheck, 
   ShoppingCart,
   CheckCircle,
   MessageCircle,
   Share2,
   Heart,
-  ChevronRight,
   Phone,
   Mail,
   X,
-  Wrench,
   Edit,
   Trash2,
-  AlertTriangle,
   AlertCircle,
   TrendingDown,
-  DollarSign,
-  MessageSquare,
-  Smartphone,
-  Clock as ClockIcon,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 
 interface Product {
@@ -527,70 +523,77 @@ const ProductDetail = () => {
         Retour au marché
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-        {/* Image Section */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-100 aspect-square">
-            {product.image_url ? (
-              <img 
-                src={product.image_url} 
-                alt={product.title} 
-                className="w-full h-full object-cover" 
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-                Pas d'image
-              </div>
-            )}
-          </div>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <Link to="/" className="hover:text-primary">Accueil</Link>
+        <span>/</span>
+        <Link to="/products" className="hover:text-primary">Marché</Link>
+        <span>/</span>
+        <span className="text-slate-900 dark:text-white">{product.category}</span>
+        <span>/</span>
+        <span className="text-slate-900 dark:text-white truncate">{product.title}</span>
+      </div>
 
-          {/* Quick Actions Mobile */}
-          <div className="flex gap-2 lg:hidden">
-            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 rounded-xl text-gray-600 font-medium">
-              <Heart className="w-5 h-5" />
-              Favoris
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 rounded-xl text-gray-600 font-medium">
-              <Share2 className="w-5 h-5" />
-              Partager
-            </button>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Image Gallery */}
+        <div>
+          <ImageGallery 
+            images={product.image_url ? [product.image_url] : []} 
+            title={product.title}
+          />
         </div>
 
         {/* Info Section */}
-        <div className="space-y-5 sm:space-y-6">
-          {/* Title & Meta */}
+        <div className="space-y-6">
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {product.profiles?.is_verified && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium">
+                <ShieldCheck className="w-4 h-4" />
+                Vendeur vérifié
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium">
+              <Sparkles className="w-4 h-4" />
+              Escrow sécurisé
+            </span>
+          </div>
+
+          {/* Title */}
           <div>
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-              <Clock className="w-4 h-4" />
-              <span>Publié le {formatDate(product.created_at)}</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-dark mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3 leading-tight">
               {product.title}
             </h1>
-            <div className="flex items-center gap-2 text-gray-500">
-              <MapPin className="w-4 h-4" />
-              <span>{product.location || 'Goma, RDC'}</span>
+            <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-4 h-4" />
+                <span>{product.location || 'Goma, RDC'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                <span>Publié le {formatDate(product.created_at)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Price */}
-          <div className="bg-gradient-to-r from-primary/5 to-blue-500/5 rounded-2xl p-5 sm:p-6 border border-primary/10">
-            <div className="mb-2">
+          {/* Price - Very Visible */}
+          <div className="bg-gradient-to-br from-primary/10 via-blue-50 to-cyan-50 dark:from-primary/20 dark:via-slate-800 dark:to-slate-800 rounded-2xl p-6 border-2 border-primary/20">
+            <div className="mb-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Prix</div>
               {(() => {
                 const priceInFC = getPriceInFC(product);
                 const priceInADA = getCurrentPriceInADA(product);
                 return (
                   <>
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-4xl sm:text-5xl font-bold text-dark">
+                    <div className="flex items-baseline gap-3 mb-2">
+                      <span className="text-5xl sm:text-6xl font-extrabold text-slate-900 dark:text-white">
                         {formatFC(priceInFC)}
                       </span>
-                      <span className="text-xl text-gray-400">FC</span>
+                      <span className="text-2xl text-slate-500 dark:text-slate-400">FC</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-3 text-base text-slate-600 dark:text-slate-300">
                       <span>≈ {formatADA(priceInADA)} ADA</span>
-                      <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                         Temps réel
                       </span>
@@ -599,76 +602,73 @@ const ProductDetail = () => {
                 );
               })()}
             </div>
+            
+            {/* Size info for fashion */}
             {product.category === 'fashion' && (
-              <>
+              <div className="flex gap-2 flex-wrap">
                 {product.fashion_type === 'habit' && product.size && (
-                  <div className="mb-2">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/60 rounded-lg text-sm font-medium text-dark">
-                      <span className="text-gray-500">Taille:</span>
-                      <span className="font-bold text-primary">{product.size}</span>
-                    </span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-slate-500">Taille:</span>
+                    <span className="font-bold text-primary">{product.size}</span>
+                  </span>
                 )}
                 {product.fashion_type === 'soulier' && product.shoe_number && (
-                  <div className="mb-2">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/60 rounded-lg text-sm font-medium text-dark">
-                      <span className="text-gray-500">Numéro:</span>
-                      <span className="font-bold text-primary">{product.shoe_number}</span>
-                    </span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-slate-500">Numéro:</span>
+                    <span className="font-bold text-primary">{product.shoe_number}</span>
+                  </span>
                 )}
-              </>
+              </div>
             )}
-            <div className="flex items-center gap-2 text-green-600 text-sm">
-              <Shield className="w-4 h-4" />
-              <span>Protection Escrow garantie</span>
-            </div>
           </div>
 
-          {/* Seller Card */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Vendeur</p>
+          {/* Seller Card - Enhanced */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Vendeur</div>
             
             <Link 
               to={`/seller/${product.seller_id}`}
-              className="flex items-center gap-3 group"
+              className="flex items-center gap-4 group mb-4"
             >
               {product.profiles?.avatar_url ? (
                 <img 
                   src={product.profiles.avatar_url} 
                   alt={product.profiles.full_name}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover"
+                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-200 dark:ring-slate-700 group-hover:ring-primary transition"
                 />
               ) : (
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-lg font-bold">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-2xl font-bold">
                   {product.profiles?.full_name?.charAt(0) || 'V'}
                 </div>
               )}
               
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-dark group-hover:text-primary transition">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary transition">
                     {product.profiles?.full_name || 'Vendeur'}
                   </p>
                   {product.profiles?.is_verified && (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
+                      <CheckCircle className="w-3 h-3" />
+                      Vérifié
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-500">
+                <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                   <span className="flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                    {product.profiles?.reputation_score || 0} pts
+                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {product.profiles?.reputation_score?.toFixed(1) || '0.0'}
+                    </span>
                   </span>
-                  <span>{sellerProductsCount} produits</span>
+                  <span>{sellerProductsCount} produit{sellerProductsCount !== 1 ? 's' : ''}</span>
                 </div>
               </div>
-
-              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary transition" />
             </Link>
 
             <Link
               to={`/seller/${product.seller_id}`}
-              className="block mt-4 text-center py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+              className="block w-full text-center py-3 border-2 border-primary text-primary font-semibold rounded-xl hover:bg-primary hover:text-white transition-colors"
             >
               Voir la boutique
             </Link>
@@ -736,24 +736,26 @@ const ProductDetail = () => {
                   <div className="space-y-3">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Méthode de paiement</p>
                     
-                    {/* Option ADA */}
+                    {/* CTA Principal - Acheter */}
                     <button 
                       onClick={handleBuy}
                       disabled={processing}
-                      className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-4 px-4 rounded-xl sm:rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-5 px-6 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-[0.98] transition-all disabled:opacity-50 text-lg"
                     >
-                      <div className="flex items-center gap-3">
-                        {processing ? (
-                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      {processing ? (
+                        <>
+                          <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                           </svg>
-                        ) : (
-                          <ShoppingCart className="w-5 h-5" />
-                        )}
-                        <span>{processing ? 'Traitement...' : 'Payer avec ADA'}</span>
-                      </div>
-                      <span className="text-xs bg-white/20 px-2 py-1 rounded-lg font-medium">Disponible</span>
+                          <span>Traitement...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-6 h-6" />
+                          <span>Acheter maintenant</span>
+                        </>
+                      )}
                     </button>
 
                     {/* Option Mobile Money */}
@@ -1304,6 +1306,89 @@ const ProductDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Produits Similaires */}
+      {product && (
+        <SimilarProductsSection 
+          currentProductId={product.id} 
+          category={product.category}
+        />
+      )}
+    </div>
+  );
+};
+
+// Composant pour produits similaires
+const SimilarProductsSection: React.FC<{ currentProductId: string; category: string }> = ({ 
+  currentProductId, 
+  category 
+}) => {
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSimilar = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select(`
+            *,
+            profiles:seller_id(full_name, avatar_url, reputation_score, is_verified)
+          `)
+          .eq('status', 'available')
+          .eq('category', category)
+          .neq('id', currentProductId)
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (error) throw error;
+        setSimilarProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching similar products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSimilar();
+  }, [currentProductId, category]);
+
+  if (loading || similarProducts.length === 0) return null;
+
+  return (
+    <div className="mt-16">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+          Produits similaires
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400">
+          D'autres produits qui pourraient vous intéresser
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {similarProducts.map((product) => {
+          const daysSinceCreation = Math.floor(
+            (Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const isNew = daysSinceCreation <= 7;
+          
+          return (
+            <ProductCard
+              key={product.id}
+              id={product.id}
+              title={product.title}
+              image_url={product.image_url}
+              price_ada={product.price_ada}
+              price_fc={product.price_fc}
+              location={product.location}
+              category={product.category}
+              created_at={product.created_at}
+              seller={product.profiles}
+              isNew={isNew}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };
