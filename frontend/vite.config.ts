@@ -5,12 +5,24 @@ import wasm from 'vite-plugin-wasm'
 
 // Plugin personnalisé pour résoudre le problème avec stream-browserify/web
 const streamBrowserifyFix = () => {
+  const virtualModuleId = 'stream-browserify/web';
+  const resolvedId = '\0' + virtualModuleId;
+  
   return {
     name: 'stream-browserify-fix',
+    enforce: 'pre', // S'exécuter avant les autres plugins
     resolveId(id: string) {
-      if (id === 'stream-browserify/web') {
-        // Rediriger vers stream-browserify
-        return { id: 'stream-browserify', external: false };
+      // Intercepter les imports de stream-browserify/web
+      if (id === virtualModuleId) {
+        return resolvedId;
+      }
+      return null;
+    },
+    load(id: string) {
+      // Si on charge le module virtuel, retourner le contenu de stream-browserify
+      if (id === resolvedId) {
+        // Réexporter stream-browserify
+        return `export * from 'stream-browserify'; export { default } from 'stream-browserify';`;
       }
       return null;
     },
@@ -36,10 +48,17 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      // Résoudre le problème avec stream-browserify/web
-      'stream-browserify/web': 'stream-browserify',
-    },
+    alias: [
+      // Résoudre le problème avec stream-browserify/web - utiliser une fonction pour plus de contrôle
+      {
+        find: /^stream-browserify\/web$/,
+        replacement: 'stream-browserify',
+      },
+      {
+        find: 'stream-browserify/web',
+        replacement: 'stream-browserify',
+      },
+    ],
   },
   server: {
     fs: {
