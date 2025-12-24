@@ -24,6 +24,7 @@ const CreateProduct = () => {
     price_min: '',
     price_max: '',
     category: 'electronics',
+    condition: 'new', // 'new' or 'used'
     fashion_type: '',
     size: '',
     shoe_number: '',
@@ -216,6 +217,11 @@ const CreateProduct = () => {
         productData.price_ada = convertFCToADA(avgPrice);
       }
 
+      // Ajouter la condition du produit (nouveau/occasion) - seulement pour les produits (pas les services)
+      if (formData.category !== 'service') {
+        productData.condition = formData.condition;
+      }
+
       // Ajouter la disponibilité pour les services
       if (formData.category === 'service') {
         productData.is_available = formData.is_available;
@@ -226,17 +232,20 @@ const CreateProduct = () => {
         productData.image_url = finalImageUrl;
       }
 
-      // Ajouter les champs Mode si applicable (uniquement si valeurs présentes)
+      // Ajouter les champs Mode si applicable (uniquement si valeurs présentes et non vides)
       if (formData.category === 'fashion') {
         if (formData.fashion_type && formData.fashion_type.trim()) {
           productData.fashion_type = formData.fashion_type.trim();
         }
-        if (formData.fashion_type === 'habit' && formData.size?.trim()) {
+        if (formData.fashion_type === 'habit' && formData.size && formData.size.trim()) {
           productData.size = formData.size.trim();
         }
-        if (formData.fashion_type === 'soulier' && formData.shoe_number?.trim()) {
+        if (formData.fashion_type === 'soulier' && formData.shoe_number && formData.shoe_number.trim()) {
           productData.shoe_number = formData.shoe_number.trim();
         }
+      } else {
+        // S'assurer que les champs Mode ne sont pas inclus pour les autres catégories
+        // (ne pas les envoyer du tout si la catégorie n'est pas fashion)
       }
 
       // Ajouter les contacts pour les catégories sans escrow
@@ -257,10 +266,28 @@ const CreateProduct = () => {
       if (error) {
         console.error('Supabase error details:', error);
         // Vérifier si l'erreur est liée aux colonnes manquantes
-        if (error.message?.includes('column') || error.message?.includes('does not exist')) {
+        if (error.message?.includes('column') || error.message?.includes('does not exist') || error.message?.includes('n\'existe pas')) {
+          const missingColumns: string[] = [];
+          if (error.message?.includes('fashion_type')) missingColumns.push('fashion_type');
+          if (error.message?.includes('shoe_number')) missingColumns.push('shoe_number');
+          if (error.message?.includes('size')) missingColumns.push('size');
+          if (error.message?.includes('condition')) missingColumns.push('condition');
+          if (error.message?.includes('price_fc')) missingColumns.push('price_fc');
+          if (error.message?.includes('price_type')) missingColumns.push('price_type');
+          if (error.message?.includes('price_min')) missingColumns.push('price_min');
+          if (error.message?.includes('price_max')) missingColumns.push('price_max');
+          if (error.message?.includes('contact_whatsapp')) missingColumns.push('contact_whatsapp');
+          if (error.message?.includes('contact_email')) missingColumns.push('contact_email');
+          if (error.message?.includes('is_available')) missingColumns.push('is_available');
+          
+          const columnsMsg = missingColumns.length > 0 
+            ? `Colonnes manquantes: ${missingColumns.join(', ')}. `
+            : '';
+          
           throw new Error(
-            'Erreur: Les colonnes fashion_type ou shoe_number n\'existent pas dans la base de données. ' +
-            'Veuillez exécuter la migration SQL: supabase/migrations/add_fashion_fields.sql'
+            `Erreur de base de données: ${columnsMsg}` +
+            'Veuillez exécuter la migration SQL consolidée: supabase/migrations/01_consolidate_all_product_columns.sql ' +
+            'dans l\'éditeur SQL de Supabase. Cette migration ajoute toutes les colonnes nécessaires.'
           );
         }
         throw error;
@@ -278,33 +305,33 @@ const CreateProduct = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-1 sm:px-0">
-      {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* Header - Compact */}
+      <div className="flex items-center gap-3 mb-6">
         <Link 
           to="/products" 
-          className="p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 rounded-lg transition"
         >
-          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
         </Link>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-dark">Publier une annonce</h1>
-          <p className="text-gray-500 mt-0.5 sm:mt-1 text-sm sm:text-base">Vendez un produit ou proposez un service</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-dark dark:text-white">Publier une annonce</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Vendez un produit ou proposez un service</p>
         </div>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Image Upload Section */}
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-gray-100">
-            <h2 className="font-semibold text-dark flex items-center gap-2 text-sm sm:text-base">
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              {formData.category === 'service' ? 'Photo/Illustration du service' : 'Photo du produit'}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Image Upload Section - Compact */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-dark dark:text-white flex items-center gap-2 text-sm">
+              <Camera className="w-4 h-4 text-primary" />
+              {formData.category === 'service' ? 'Photo/Illustration' : 'Photo du produit'}
             </h2>
           </div>
           
-          <div className="p-4 sm:p-6">
-            <div className="relative border-2 border-dashed border-gray-200 rounded-xl sm:rounded-2xl p-6 sm:p-8 bg-gray-50 hover:bg-gray-100 hover:border-primary/50 transition-all cursor-pointer group active:bg-gray-200">
+          <div className="p-4">
+            <div className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 hover:border-primary/50 transition-all cursor-pointer group active:scale-[0.98]">
               <input 
                 type="file" 
                 accept="image/*" 
@@ -313,48 +340,49 @@ const CreateProduct = () => {
               />
               
               {previewUrl ? (
-                <div className="relative aspect-video max-h-56 sm:max-h-72 mx-auto">
-                  <img src={previewUrl} alt="Preview" className="w-full h-full object-contain rounded-lg sm:rounded-xl" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg sm:rounded-xl">
-                    <span className="text-white font-semibold text-sm sm:text-base">Changer l'image</span>
+                <div className="relative aspect-video max-h-48 mx-auto">
+                  <img src={previewUrl} alt="Preview" className="w-full h-full object-contain rounded-lg" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg">
+                    <span className="text-white font-semibold text-sm">Changer l'image</span>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4 sm:py-8">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:bg-primary/20 transition">
-                    <Upload className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 dark:group-hover:bg-primary/30 transition">
+                    <Upload className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="font-semibold text-dark mb-1 text-sm sm:text-base">Cliquez pour ajouter une photo</p>
-                  <p className="text-xs sm:text-sm text-gray-400">PNG, JPG jusqu'à 10MB</p>
+                  <p className="font-semibold text-dark dark:text-white mb-1 text-sm">Cliquez pour ajouter une photo</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG jusqu'à 10MB</p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Product Details */}
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-gray-100">
-            <h2 className="font-semibold text-dark flex items-center gap-2 text-sm sm:text-base">
-              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+        {/* Product Details - Compact avec layout 2 colonnes */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-dark dark:text-white flex items-center gap-2 text-sm">
+              <Package className="w-4 h-4 text-primary" />
               {formData.category === 'service' ? 'Détails du service' : 'Détails du produit'}
             </h2>
           </div>
           
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-            {/* Catégorie en premier */}
-            <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                Catégorie
-              </label>
-              <select 
-                name="category" 
-                required
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base appearance-none"
-                value={formData.category}
-                onChange={handleChange}
-              >
+          <div className="p-4 space-y-4">
+            {/* Catégorie et Condition - Layout 2 colonnes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <Tag className="w-3.5 h-3.5 text-gray-400" />
+                  Catégorie
+                </label>
+                <select 
+                  name="category" 
+                  required
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm appearance-none"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
                 <option value="electronics">Électronique</option>
                 <option value="fashion">Mode</option>
                 <option value="food">Aliments</option>
@@ -364,19 +392,41 @@ const CreateProduct = () => {
                 <option value="real_estate">Immobilier</option>
                 <option value="auto">Auto & Moto</option>
                 <option value="other">Autres</option>
-              </select>
+                </select>
+              </div>
+
+              {/* Condition (nouveau/occasion) - seulement pour les produits (pas les services) */}
+              {formData.category !== 'service' && (
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <Package className="w-3.5 h-3.5 text-gray-400" />
+                    État du produit
+                  </label>
+                  <select 
+                    name="condition" 
+                    required
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm appearance-none"
+                    value={formData.condition}
+                    onChange={handleChange}
+                  >
+                    <option value="new">Nouveau</option>
+                    <option value="used">Occasion</option>
+                  </select>
+                </div>
+              )}
             </div>
 
+            {/* Titre - Pleine largeur */}
             <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                <Tag className="w-3.5 h-3.5 text-gray-400" />
                 Titre
               </label>
               <input 
                 type="text" 
                 name="title" 
                 required
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                 value={formData.title}
                 onChange={handleChange}
                 placeholder={
@@ -393,16 +443,17 @@ const CreateProduct = () => {
               />
             </div>
 
+            {/* Description - Compact */}
             <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                <FileText className="w-3.5 h-3.5 text-gray-400" />
                 Description
               </label>
               <textarea 
                 name="description" 
                 required
-                rows={4}
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none resize-none text-sm sm:text-base"
+                rows={3}
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none resize-none text-sm"
                 value={formData.description}
                 onChange={handleChange}
                 placeholder={
@@ -419,77 +470,72 @@ const CreateProduct = () => {
               />
             </div>
 
-            {/* Type de prix */}
-            <div>
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                Type de prix
-              </label>
-              <select 
-                name="price_type" 
-                required
-                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base appearance-none"
-                value={formData.price_type}
-                onChange={handleChange}
-              >
-                <option value="fixed">Prix fixe</option>
-                <option value="negotiable">Prix négociable</option>
-              </select>
+            {/* Prix - Type et montant en 2 colonnes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                  Type de prix
+                </label>
+                <select 
+                  name="price_type" 
+                  required
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm appearance-none"
+                  value={formData.price_type}
+                  onChange={handleChange}
+                >
+                  <option value="fixed">Prix fixe</option>
+                  <option value="negotiable">Prix négociable</option>
+                </select>
+              </div>
+
+              {/* Prix fixe */}
+              {formData.price_type === 'fixed' && (
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                    {formData.category === 'service' ? 'Tarif (FC)' : 'Prix (FC)'}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      name="price_fc" 
+                      required={formData.price_type === 'fixed'}
+                      min="0"
+                      step="100"
+                      className="w-full px-3 py-2.5 pr-12 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
+                      value={formData.price_fc}
+                      onChange={handleChange}
+                      placeholder="0"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-xs">FC</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Prix fixe */}
-            {formData.price_type === 'fixed' && (
-              <div>
-                <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                  <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-                  {formData.category === 'service' ? 'Tarif (Francs Congolais)' : 'Prix (Francs Congolais)'}
-                </label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    name="price_fc" 
-                    required={formData.price_type === 'fixed'}
-                    min="0"
-                    step="100"
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3.5 pr-16 sm:pr-20 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
-                    value={formData.price_fc}
-                    onChange={handleChange}
-                    placeholder="0"
-                  />
-                  <span className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">FC</span>
-                </div>
-                {/* Affichage de la conversion en temps réel */}
-                {formData.price_fc && parseFloat(formData.price_fc) > 0 && (
-                  <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                        <span className="text-xs text-gray-600">Équivalent en ADA:</span>
-                      </div>
-                      <span className="text-sm font-bold text-primary">
-                        {formatADA(priceInADA)} ADA
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">
-                        Taux: 1 ADA = {getExchangeRate().toLocaleString('fr-FR')} FC
-                      </span>
-                      <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                        Temps réel
-                      </span>
-                    </div>
+            {/* Conversion ADA - Compact */}
+            {formData.price_type === 'fixed' && formData.price_fc && parseFloat(formData.price_fc) > 0 && (
+              <div className="p-2.5 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-gray-600 dark:text-gray-300">≈ {formatADA(priceInADA)} ADA</span>
                   </div>
-                )}
+                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    Temps réel
+                  </span>
+                </div>
               </div>
             )}
 
-            {/* Prix négociable */}
+            {/* Prix négociable - Layout 2 colonnes */}
             {formData.price_type === 'negotiable' && (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                    <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <Minus className="w-3.5 h-3.5 text-gray-400" />
                     Prix minimum (FC)
                   </label>
                   <div className="relative">
@@ -499,17 +545,17 @@ const CreateProduct = () => {
                       required={formData.price_type === 'negotiable'}
                       min="0"
                       step="100"
-                      className="w-full px-3 sm:px-4 py-3 sm:py-3.5 pr-16 sm:pr-20 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                      className="w-full px-3 py-2.5 pr-12 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                       value={formData.price_min}
                       onChange={handleChange}
                       placeholder="0"
                     />
-                    <span className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">FC</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-xs">FC</span>
                   </div>
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <Plus className="w-3.5 h-3.5 text-gray-400" />
                     Prix maximum (FC)
                   </label>
                   <div className="relative">
@@ -519,33 +565,36 @@ const CreateProduct = () => {
                       required={formData.price_type === 'negotiable'}
                       min="0"
                       step="100"
-                      className="w-full px-3 sm:px-4 py-3 sm:py-3.5 pr-16 sm:pr-20 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                      className="w-full px-3 py-2.5 pr-12 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                       value={formData.price_max}
                       onChange={handleChange}
                       placeholder="0"
                     />
-                    <span className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">FC</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-xs">FC</span>
                   </div>
                 </div>
-                {formData.price_min && formData.price_max && parseFloat(formData.price_min) >= parseFloat(formData.price_max) && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-xs text-red-600">⚠️ Le prix minimum doit être inférieur au prix maximum</p>
-                  </div>
-                )}
+              </div>
+            )}
+            {formData.price_type === 'negotiable' && formData.price_min && formData.price_max && parseFloat(formData.price_min) >= parseFloat(formData.price_max) && (
+              <div className="p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Le prix minimum doit être inférieur au prix maximum
+                </p>
               </div>
             )}
 
-            {/* Disponibilité pour les services */}
+            {/* Disponibilité pour les services - Compact */}
             {formData.category === 'service' && (
               <div>
-                <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                  <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-gray-400" />
                   Disponibilité
                 </label>
                 <select 
                   name="is_available" 
                   required
-                  className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base appearance-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm appearance-none"
                   value={formData.is_available ? 'true' : 'false'}
                   onChange={(e) => setFormData({ ...formData, is_available: e.target.value === 'true' })}
                 >
@@ -555,19 +604,18 @@ const CreateProduct = () => {
               </div>
             )}
 
-            {/* Mode - Type et dimensions */}
+            {/* Mode - Type et dimensions - Layout 2 colonnes */}
             {formData.category === 'fashion' && (
-              <div className="space-y-4">
-                {/* Type de produit Mode */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                    <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <Tag className="w-3.5 h-3.5 text-gray-400" />
                     Type de produit
                   </label>
                   <select 
                     name="fashion_type" 
                     required
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base appearance-none"
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm appearance-none"
                     value={formData.fashion_type}
                     onChange={handleChange}
                   >
@@ -577,40 +625,39 @@ const CreateProduct = () => {
                   </select>
                 </div>
 
-                {/* Taille - Affiché uniquement pour Habit */}
+                {/* Taille ou Numéro selon le type */}
                 {formData.fashion_type === 'habit' && (
                   <div>
-                    <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                      <Ruler className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <Ruler className="w-3.5 h-3.5 text-gray-400" />
                       Taille
                     </label>
                     <input 
                       type="text" 
                       name="size" 
                       required
-                      className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                      className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                       value={formData.size}
                       onChange={handleChange}
-                      placeholder="Ex: M, L, XL, 42, etc."
+                      placeholder="Ex: M, L, XL, 42"
                     />
                   </div>
                 )}
 
-                {/* Numéro - Affiché uniquement pour Soulier */}
                 {formData.fashion_type === 'soulier' && (
                   <div>
-                    <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                      <Footprints className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <Footprints className="w-3.5 h-3.5 text-gray-400" />
                       Numéro
                     </label>
                     <input 
                       type="text" 
                       name="shoe_number" 
                       required
-                      className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                      className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                       value={formData.shoe_number}
                       onChange={handleChange}
-                      placeholder="Ex: 40, 42, 44, etc."
+                      placeholder="Ex: 40, 42, 44"
                     />
                   </div>
                 )}
@@ -620,15 +667,15 @@ const CreateProduct = () => {
             {/* Catégorie personnalisée - Affiché uniquement pour Autres */}
             {formData.category === 'other' && (
               <div>
-                <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
-                  <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <Tag className="w-3.5 h-3.5 text-gray-400" />
                   Nom de votre catégorie
                 </label>
                 <input 
                   type="text" 
                   name="custom_category" 
                   required
-                  className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white dark:focus:bg-gray-800 transition outline-none text-sm"
                   value={formData.custom_category}
                   onChange={handleChange}
                   placeholder="Ex: Livres, Jouets, Sport..."
@@ -636,49 +683,51 @@ const CreateProduct = () => {
               </div>
             )}
 
-            {/* Champs de contact - Affichés pour catégories sans escrow */}
+            {/* Champs de contact - Compact avec layout 2 colonnes */}
             {NO_ESCROW_CATEGORIES.includes(formData.category) && (
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl space-y-4">
-                <div className="flex items-start gap-2 text-green-700 mb-2">
-                  <Phone className="w-4 h-4 mt-0.5" />
+              <div className="p-3.5 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
+                <div className="flex items-start gap-2 text-green-700 dark:text-green-400">
+                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm">Informations de contact</p>
-                    <p className="text-xs text-green-600">Au moins un moyen de contact est obligatoire.</p>
+                    <p className="font-semibold text-xs">Informations de contact</p>
+                    <p className="text-[10px] text-green-600 dark:text-green-500 mt-0.5">Au moins un moyen de contact est obligatoire</p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                    <Phone className="w-3.5 h-3.5 text-green-500" />
-                    Numéro WhatsApp
-                  </label>
-                  <input 
-                    type="tel" 
-                    name="contact_whatsapp" 
-                    className="w-full px-3 sm:px-4 py-3 bg-white border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition outline-none text-sm sm:text-base"
-                    value={formData.contact_whatsapp}
-                    onChange={handleChange}
-                    placeholder="+243 XXX XXX XXX"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <Phone className="w-3 h-3 text-green-500" />
+                      WhatsApp
+                    </label>
+                    <input 
+                      type="tel" 
+                      name="contact_whatsapp" 
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition outline-none text-sm"
+                      value={formData.contact_whatsapp}
+                      onChange={handleChange}
+                      placeholder="+243 XXX XXX XXX"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <Mail className="w-3 h-3 text-blue-500" />
+                      Email
+                    </label>
+                    <input 
+                      type="email" 
+                      name="contact_email" 
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none text-sm"
+                      value={formData.contact_email}
+                      onChange={handleChange}
+                      placeholder="votre@email.com"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                    <Mail className="w-3.5 h-3.5 text-blue-500" />
-                    Adresse Email
-                  </label>
-                  <input 
-                    type="email" 
-                    name="contact_email" 
-                    className="w-full px-3 sm:px-4 py-3 bg-white border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none text-sm sm:text-base"
-                    value={formData.contact_email}
-                    onChange={handleChange}
-                    placeholder="votre@email.com"
-                  />
-                </div>
-
-                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-2 rounded-lg flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
                   <span>Cette catégorie n'utilise pas l'escrow. Les acheteurs vous contacteront directement.</span>
                 </p>
               </div>
@@ -686,22 +735,25 @@ const CreateProduct = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button - Compact */}
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-3.5 sm:py-4 px-6 rounded-xl hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
+          className="w-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
         >
           {loading ? (
             <>
-              <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
               Publication en cours...
             </>
             ) : (
-              formData.category === 'service' ? 'Publier le service' : 'Publier le produit'
+              <>
+                <CheckCircle className="w-4 h-4" />
+                {formData.category === 'service' ? 'Publier le service' : 'Publier le produit'}
+              </>
             )}
         </button>
       </form>

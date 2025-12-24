@@ -53,21 +53,22 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 console.warn('⚠️ Network warning:', networkCheck.message);
               }
               
-              // Initialiser Lucid avec le wallet et le réseau détecté
-              // Note: Lucid est optionnel - l'application fonctionne même sans lui
-              try {
-                const lucidInstance = await initLucid(api, detectedNetwork);
-                setLucid(lucidInstance);
-                console.log('✅ Lucid initialisé avec succès');
-              } catch (error: any) {
-                console.warn('⚠️ Lucid ne peut pas être initialisé:', error?.message || error);
-                console.info('ℹ️ L\'application continuera de fonctionner sans Lucid');
-                // Ne pas bloquer - le wallet fonctionne toujours
-                setLucid(null);
-              }
+              // Initialiser Lucid en arrière-plan (non-bloquant pour améliorer la latence)
+              initLucid(api, detectedNetwork)
+                .then((lucidInstance) => {
+                  setLucid(lucidInstance);
+                  console.log('✅ Lucid initialisé avec succès');
+                })
+                .catch((error: any) => {
+                  console.warn('⚠️ Lucid ne peut pas être initialisé:', error?.message || error);
+                  console.info('ℹ️ L\'application continuera de fonctionner sans Lucid');
+                  setLucid(null);
+                });
               
-              // Rafraîchir le solde
-              refreshBalance(api, walletData);
+              // Rafraîchir le solde en arrière-plan (non-bloquant)
+              refreshBalance(api, walletData).catch((error) => {
+                console.warn('Error refreshing balance:', error);
+              });
             }
           } catch (error) {
             // Wallet déconnecté ou refusé
@@ -103,40 +104,43 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [walletApi, wallet]);
 
   const connectWallet = useCallback(async (walletData: WalletData) => {
+    // Mettre à jour l'état du wallet immédiatement pour un feedback rapide
     setWallet(walletData);
     
-    // Détecter le réseau depuis l'adresse
+    // Détecter le réseau depuis l'adresse (opération synchrone, rapide)
     const address = walletData.addressBech32;
     const detectedNetwork = checkNetwork(address) ? 'testnet' : 'mainnet';
     setNetwork(detectedNetwork);
     
-    // Vérifier le réseau et afficher un avertissement si nécessaire
+    // Vérifier le réseau (synchrone)
     const networkCheck = verifyNetwork(walletData);
     if (!networkCheck.valid) {
       console.warn('⚠️ Network warning:', networkCheck.message);
     }
     
-    // Sauvegarder dans localStorage
+    // Sauvegarder dans localStorage (synchrone, rapide)
     localStorage.setItem('wenze-wallet-id', walletData.walletId);
     localStorage.setItem('wenze-wallet-data', JSON.stringify(walletData));
     
-    // Récupérer l'API du wallet et initialiser Lucid
+    // Récupérer l'API du wallet (asynchrone mais nécessaire)
     if (window.cardano?.[walletData.walletId]) {
       try {
         const api = await window.cardano[walletData.walletId].enable();
         setWalletApi(api);
         
-        // Initialiser Lucid avec le wallet et le réseau détecté
-        try {
-          const lucidInstance = await initLucid(api, detectedNetwork);
-          setLucid(lucidInstance);
-          console.log('✅ Lucid initialisé avec succès');
-        } catch (error: any) {
-          console.error('❌ Erreur lors de l\'initialisation de Lucid:', error);
-          console.warn('⚠️ Lucid ne sera pas disponible, mais le wallet reste connecté');
-          // Ne pas bloquer l'application si Lucid échoue
-          // L'utilisateur pourra toujours utiliser le wallet, même sans Lucid
-        }
+        // Initialiser Lucid en arrière-plan (non-bloquant)
+        // Ne pas attendre pour améliorer la réactivité
+        initLucid(api, detectedNetwork)
+          .then((lucidInstance) => {
+            setLucid(lucidInstance);
+            console.log('✅ Lucid initialisé avec succès');
+          })
+          .catch((error: any) => {
+            console.warn('⚠️ Lucid ne peut pas être initialisé:', error?.message || error);
+            console.info('ℹ️ Le wallet reste connecté et fonctionnel sans Lucid');
+            // Ne pas bloquer - le wallet fonctionne toujours
+            setLucid(null);
+          });
       } catch (error: any) {
         console.error('Error enabling wallet API:', error);
       }

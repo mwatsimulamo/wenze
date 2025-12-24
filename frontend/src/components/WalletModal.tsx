@@ -225,25 +225,35 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
         }
       }
 
-      let balanceAda = 0;
-      try {
-        const balanceHex = await walletApi.getBalance();
-        balanceAda = parseCborBalance(balanceHex) / 1_000_000;
-      } catch (e) { console.warn('Balance error:', e); }
-
       const walletConfig = CARDANO_WALLETS.find(w => w.id === walletId)!;
       
+      // Créer le walletData avec balance à 0 initialement pour améliorer la latence
       const walletData: WalletData = {
         name: walletConfig.name,
         address: addressHex,
         addressBech32,
-        balance: balanceAda,
+        balance: 0, // Initialiser à 0 pour un feedback immédiat
         walletId,
         icon: walletConfig.icon,
       };
 
+      // Connecter immédiatement (sans attendre le solde)
       setConnectedWallet(walletData);
       onConnect(walletData);
+      
+      // Charger le solde en arrière-plan (non-bloquant)
+      walletApi.getBalance()
+        .then((balanceHex: any) => {
+          const balanceAda = parseCborBalance(balanceHex) / 1_000_000;
+          const updatedWalletData = { ...walletData, balance: balanceAda };
+          // Mettre à jour le solde localement et dans le context
+          setConnectedWallet(updatedWalletData);
+          onConnect(updatedWalletData);
+        })
+        .catch((e: any) => { 
+          console.warn('Balance error:', e);
+          // Le wallet reste connecté même si le solde ne charge pas
+        });
     } catch (err: any) {
       console.error('Wallet error:', err);
     } finally {
@@ -388,8 +398,9 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
                   <span className="text-2xl font-bold text-white">
                     {connectedWallet.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                   </span>
-                  <span className="text-cyan-400 font-medium">ADA</span>
+                  <span className="text-cyan-400 font-medium text-xl">t₳</span>
                 </div>
+                <p className="text-gray-500 text-[10px] mt-1">Testnet ADA</p>
               </div>
 
               {/* Address */}

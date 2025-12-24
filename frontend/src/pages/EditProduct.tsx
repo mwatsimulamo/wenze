@@ -24,6 +24,7 @@ const EditProduct = () => {
     description: '',
     price_fc: '',
     category: 'electronics',
+    condition: 'new', // 'new' or 'used'
     fashion_type: '',
     size: '',
     shoe_number: '',
@@ -72,6 +73,7 @@ const EditProduct = () => {
         description: data.description || '',
         price_fc: priceInFC > 0 ? priceInFC.toString() : '',
         category: isCustomCategory ? 'other' : data.category || 'electronics',
+        condition: data.condition || 'new',
         fashion_type: data.fashion_type || '',
         size: data.size || '',
         shoe_number: data.shoe_number || '',
@@ -256,6 +258,11 @@ const EditProduct = () => {
         updateData.fashion_type = null;
         updateData.size = null;
         updateData.shoe_number = null;
+      }
+
+      // Ajouter la condition du produit (nouveau/occasion) - seulement pour les produits (pas les services)
+      if (formData.category !== 'service') {
+        updateData.condition = formData.condition;
       }
 
       // Ajouter les contacts pour les catégories sans escrow
@@ -487,6 +494,26 @@ const EditProduct = () => {
                 </select>
               </div>
             </div>
+
+            {/* Condition (nouveau/occasion) - seulement pour les produits (pas les services) */}
+            {formData.category !== 'service' && (
+              <div>
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
+                  <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                  État du produit
+                </label>
+                <select 
+                  name="condition" 
+                  required
+                  className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition outline-none text-sm sm:text-base appearance-none"
+                  value={formData.condition}
+                  onChange={handleChange}
+                >
+                  <option value="new">Nouveau</option>
+                  <option value="used">Occasion</option>
+                </select>
+              </div>
+            )}
 
             {/* Mode - Type et dimensions */}
             {formData.category === 'fashion' && (

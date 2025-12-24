@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Star, ShieldCheck, Sparkles, Clock } from 'lucide-react';
+import { MapPin, Star, ShieldCheck, Sparkles, Clock, RefreshCw } from 'lucide-react';
 import { formatFC, formatADA, convertADAToFC } from '../utils/currencyConverter';
 
 interface ProductCardProps {
@@ -11,6 +11,7 @@ interface ProductCardProps {
   price_fc?: number;
   location: string;
   category: string;
+  condition?: 'new' | 'used'; // État du produit : nouveau ou occasion
   created_at: string;
   seller?: {
     full_name: string;
@@ -30,6 +31,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   price_fc,
   location,
   category,
+  condition,
   created_at,
   seller,
   isNew = false,
@@ -55,19 +57,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
           loading="lazy"
         />
         
-        {/* Badges Overlay - Plus petits */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1.5">
-          {isNew || isNewProduct ? (
-            <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded-md shadow-sm">
+        {/* Badges Overlay - Amélioré avec condition */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+          {/* Badge Condition (nouveau/occasion) - seulement pour les produits (pas les services) */}
+          {category !== 'service' && condition && (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md shadow-sm ${
+              condition === 'new'
+                ? 'bg-green-500 text-white'
+                : 'bg-amber-500 text-white'
+            }`}>
+              {condition === 'new' ? (
+                <>
+                  <Sparkles className="w-2.5 h-2.5" />
+                  <span>Neuf</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Occasion</span>
+                </>
+              )}
+            </span>
+          )}
+          {/* Badge "Nouveau sur le marché" (différent de condition) */}
+          {(isNew || isNewProduct) && (!condition || condition !== 'new') && (
+            <span className="px-2 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded-md shadow-sm">
               Nouveau
             </span>
-          ) : null}
-          {isTrending ? (
+          )}
+          {isTrending && (
             <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-md shadow-sm flex items-center gap-1">
               <Sparkles className="w-2.5 h-2.5" />
               Tendance
             </span>
-          ) : null}
+          )}
         </div>
 
         {/* Vendeur Vérifié Badge - Plus petit */}
@@ -143,5 +166,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 };
 
 export default ProductCard;
+
 
 

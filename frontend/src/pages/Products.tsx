@@ -7,7 +7,8 @@ import { convertADAToFC, convertFCToADA, formatFC, formatADA, getExchangeRate } 
 import ProductCard from '../components/ProductCard';
 import { 
   Search, 
-  Plus, 
+  Plus,
+  Minus,
   ShoppingBag, 
   Sparkles,
   ChevronDown,
@@ -22,6 +23,10 @@ import {
   Hammer,
   Building2,
   Car,
+  RefreshCw,
+  Package,
+  Star,
+  X,
 } from 'lucide-react';
 
 interface Product {
@@ -34,6 +39,7 @@ interface Product {
   seller_id: string;
   category: string;
   location: string;
+  condition?: 'new' | 'used'; // État du produit : nouveau ou occasion
   status?: string; // 'available', 'sold', 'suspended'
   created_at: string;
   profiles?: {
@@ -67,6 +73,9 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCondition, setSelectedCondition] = useState<'all' | 'new' | 'used'>('all');
+  // Nombre de produits à afficher (2 lignes = 12 produits sur grand écran avec 6 colonnes)
+  const [displayedProductsCount, setDisplayedProductsCount] = useState(12);
 
   useEffect(() => {
     fetchProducts();
@@ -74,7 +83,9 @@ const Products = () => {
 
   useEffect(() => {
     filterAndSortProducts();
-  }, [products, searchQuery, sortBy, selectedCategory]);
+    // Réinitialiser le compteur quand les filtres changent
+    setDisplayedProductsCount(12);
+  }, [products, searchQuery, sortBy, selectedCategory, selectedCondition]);
 
   const fetchProducts = async () => {
     try {
@@ -199,6 +210,16 @@ const Products = () => {
       }
     }
 
+    // Condition filter (nouveau/occasion) - seulement pour les produits (pas les services)
+    if (selectedCondition !== 'all') {
+      filtered = filtered.filter(p => {
+        // Pour les services, on ignore le filtre de condition
+        if (p.category === 'service') return true;
+        // Pour les autres produits, filtrer par condition
+        return p.condition === selectedCondition;
+      });
+    }
+
     // Recherche intelligente
     if (searchQuery) {
       filtered = filtered.filter(p => smartSearch(p, searchQuery));
@@ -289,17 +310,26 @@ const Products = () => {
             </Link>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar - Version améliorée pour utilisateur paresseux */}
           <div className="mt-5 sm:mt-8">
-            <div className="relative">
-              <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+            <div className="relative group">
+              <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-violet-400 transition-colors" />
               <input
                 type="text"
                 placeholder="Rechercher un produit, un vendeur, une catégorie..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-white/10 backdrop-blur border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition text-sm sm:text-base"
+                className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/30 transition-all text-sm sm:text-base shadow-lg"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                  aria-label="Effacer la recherche"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -329,23 +359,72 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex items-center justify-between gap-3 mb-5 sm:mb-6">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          <strong className="text-dark dark:text-white">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? 'produit' : 'produits'}
-        </p>
+      {/* Filters Bar - Version améliorée pour utilisateur paresseux */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Ligne 1: Filtres rapides visuels (condition) */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">État :</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setSelectedCondition('all')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+                selectedCondition === 'all'
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-primary/30 hover:text-primary'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Tous</span>
+            </button>
+            <button
+              onClick={() => setSelectedCondition('new')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+                selectedCondition === 'new'
+                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/20'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-green-500/30 hover:text-green-600 dark:hover:text-green-400'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Nouveaux</span>
+            </button>
+            <button
+              onClick={() => setSelectedCondition('used')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+                selectedCondition === 'used'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-400'
+              }`}
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Occasion</span>
+            </button>
+          </div>
+        </div>
 
-        <div className="relative">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:border-primary cursor-pointer"
-          >
-            <option value="recent">{t('products.sort.recent')}</option>
-            <option value="price_low">{t('products.sort.price_low')}</option>
-            <option value="price_high">{t('products.sort.price_high')}</option>
-          </select>
-          <ChevronDown className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
+        {/* Ligne 2: Compteur et tri */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              <strong className="text-dark dark:text-white font-semibold">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? 'produit trouvé' : 'produits trouvés'}
+            </p>
+          </div>
+
+          {/* Sort Filter - Version améliorée */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer transition-all hover:border-primary/50"
+            >
+              <option value="recent">{t('products.sort.recent')}</option>
+              <option value="price_low">{t('products.sort.price_low')}</option>
+              <option value="price_high">{t('products.sort.price_high')}</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -375,40 +454,61 @@ const Products = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-5">
-          {filteredProducts.map((product, index) => {
-            const daysSinceCreation = Math.floor(
-              (Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24)
-            );
-            const isNew = daysSinceCreation <= 7;
-            
-            return (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                title={product.title}
-                image_url={product.image_url}
-                price_ada={product.price_ada}
-                price_fc={product.price_fc}
-                location={product.location}
-                category={product.category}
-                created_at={product.created_at}
-                seller={product.profiles}
-                isNew={isNew}
-                isTrending={index < 4}
-              />
-            );
-          })}
-        </div>
-      )}
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-5">
+            {filteredProducts.slice(0, displayedProductsCount).map((product, index) => {
+              const daysSinceCreation = Math.floor(
+                (Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24)
+              );
+              const isNew = daysSinceCreation <= 7;
+              
+              return (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  title={product.title}
+                  image_url={product.image_url}
+                  price_ada={product.price_ada}
+                  price_fc={product.price_fc}
+                  location={product.location}
+                  category={product.category}
+                  condition={product.condition}
+                  created_at={product.created_at}
+                  seller={product.profiles}
+                  isNew={isNew}
+                  isTrending={index < 4}
+                />
+              );
+            })}
+          </div>
 
-      {/* Load More */}
-      {filteredProducts.length >= 12 && (
-        <div className="text-center mt-8 sm:mt-10">
-          <button className="px-6 sm:px-8 py-2.5 sm:py-3 bg-gray-100 text-gray-600 font-medium rounded-xl hover:bg-gray-200 active:scale-95 transition text-sm sm:text-base">
-            Charger plus
-          </button>
-        </div>
+          {/* Load More / Load Less - Boutons de pagination */}
+          {(filteredProducts.length > displayedProductsCount || displayedProductsCount > 12) && (
+            <div className="text-center mt-8 sm:mt-10 flex items-center justify-center gap-3">
+              {/* Bouton Charger moins - Afficher seulement si plus de 12 produits sont affichés */}
+              {displayedProductsCount > 12 && (
+                <button
+                  onClick={() => setDisplayedProductsCount(prev => Math.max(12, prev - 12))}
+                  className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-sm sm:text-base"
+                >
+                  <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Charger moins
+                </button>
+              )}
+              
+              {/* Bouton Charger plus - Afficher seulement s'il reste des produits à charger */}
+              {filteredProducts.length > displayedProductsCount && (
+                <button
+                  onClick={() => setDisplayedProductsCount(prev => prev + 12)}
+                  className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-primary to-violet-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/30 active:scale-95 transition-all text-sm sm:text-base"
+                >
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Charger plus ({filteredProducts.length - displayedProductsCount} produits restants)
+                </button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

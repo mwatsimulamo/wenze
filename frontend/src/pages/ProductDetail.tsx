@@ -37,7 +37,9 @@ import {
   DollarSign,
   AlertTriangle,
   Smartphone,
-  Wrench
+  Wrench,
+  RefreshCw,
+  Package
 } from 'lucide-react';
 
 interface Product {
@@ -55,6 +57,7 @@ interface Product {
   status: string;
   category: string;
   location: string;
+  condition?: 'new' | 'used'; // État du produit : nouveau ou occasion
   fashion_type?: string;
   size?: string;
   shoe_number?: string;
@@ -169,6 +172,10 @@ const ProductDetail = () => {
     // Vérifier que l'acheteur a un wallet connecté
     if (!walletConnected || !wallet) {
       toast.error('Wallet requis', 'Vous devez connecter un wallet Cardano (Preprod) pour effectuer un achat en ADA. Connectez votre wallet depuis la barre de navigation.');
+      // Ouvrir automatiquement le modal wallet après un court délai pour laisser le toast s'afficher
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open-wallet-modal'));
+      }, 500);
       return;
     }
 
@@ -551,90 +558,114 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-1 sm:px-0">
-      {/* Back Button */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* Back Button - Compact */}
       <Link 
         to="/products" 
-        className="inline-flex items-center gap-2 text-gray-500 hover:text-dark mb-4 sm:mb-6 text-sm"
+        className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary mb-4 text-sm font-medium transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Retour au marché
       </Link>
 
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
-        <Link to="/" className="hover:text-primary">Accueil</Link>
+      {/* Breadcrumb - Compact */}
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <Link to="/" className="hover:text-primary transition-colors">Accueil</Link>
         <span>/</span>
-        <Link to="/products" className="hover:text-primary">Marché</Link>
+        <Link to="/products" className="hover:text-primary transition-colors">Marché</Link>
         <span>/</span>
-        <span className="text-slate-900 dark:text-white">{product.category}</span>
+        <span className="text-gray-700 dark:text-gray-300 capitalize">{product.category}</span>
         <span>/</span>
-        <span className="text-slate-900 dark:text-white truncate">{product.title}</span>
+        <span className="text-gray-700 dark:text-gray-300 truncate">{product.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-        {/* Image Gallery */}
-        <div>
-          <ImageGallery 
-            images={product.image_url ? [product.image_url] : []} 
-            title={product.title}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Image Gallery - Left Side */}
+        <div className="sticky top-4 self-start">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
+            <ImageGallery 
+              images={product.image_url ? [product.image_url] : []} 
+              title={product.title}
+            />
+          </div>
         </div>
 
-        {/* Info Section */}
-        <div className="space-y-6">
-          {/* Badges */}
+        {/* Info Section - Right Side */}
+        <div className="space-y-5">
+          {/* Badges - Top */}
           <div className="flex items-center gap-2 flex-wrap">
             {product.profiles?.is_verified && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium">
-                <ShieldCheck className="w-4 h-4" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-semibold border border-green-200 dark:border-green-800">
+                <ShieldCheck className="w-3.5 h-3.5" />
                 Vendeur vérifié
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium">
-              <Sparkles className="w-4 h-4" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-semibold border border-blue-200 dark:border-blue-800">
+              <Sparkles className="w-3.5 h-3.5" />
               Escrow sécurisé
             </span>
+            {/* Badge État du produit (nouveau/occasion) */}
+            {product.category !== 'service' && product.condition && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                product.condition === 'new' 
+                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
+                  : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+              }`}>
+                {product.condition === 'new' ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Nouveau</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Occasion</span>
+                  </>
+                )}
+              </span>
+            )}
           </div>
 
-          {/* Title */}
+          {/* Title Section - Improved */}
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3 leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-3">
               {product.title}
             </h1>
-            <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-3.5 h-3.5" />
                 <span>{product.location || 'Goma, RDC'}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-3.5 h-3.5" />
                 <span>Publié le {formatDate(product.created_at)}</span>
               </div>
             </div>
           </div>
 
-          {/* Price - Very Visible */}
-          <div className="bg-gradient-to-br from-primary/10 via-blue-50 to-cyan-50 dark:from-primary/20 dark:via-slate-800 dark:to-slate-800 rounded-2xl p-6 border-2 border-primary/20">
-            <div className="mb-3">
-              <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Prix</div>
+          {/* Price Card - Enhanced & More Visible */}
+          <div className="bg-gradient-to-br from-primary/5 via-blue-50/50 to-cyan-50/50 dark:from-primary/10 dark:via-gray-800 dark:to-gray-800 rounded-2xl p-5 sm:p-6 border-2 border-primary/20 dark:border-primary/30 shadow-lg">
+            <div className="mb-4">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-semibold">Prix</div>
               {(() => {
                 const priceInFC = getPriceInFC(product);
                 const priceInADA = getCurrentPriceInADA(product);
                 return (
                   <>
-                    {/* Prix fixe ou négociable */}
+                    {/* Prix fixe */}
                     {product.price_type === 'fixed' || !product.price_type ? (
                       <>
-                        <div className="flex items-baseline gap-3 mb-2">
-                          <span className="text-5xl sm:text-6xl font-extrabold text-slate-900 dark:text-white">
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white">
                             {formatFC(priceInFC)}
                           </span>
-                          <span className="text-2xl text-slate-500 dark:text-slate-400">FC</span>
+                          <span className="text-xl text-gray-500 dark:text-gray-400 font-semibold">FC</span>
                         </div>
-                        <div className="flex items-center gap-3 text-base text-slate-600 dark:text-slate-300">
-                          <span>≈ {formatADA(priceInADA)} ADA</span>
-                          <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                            ≈ {formatADA(priceInADA)} ADA
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-md text-xs font-semibold">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                             Temps réel
                           </span>
@@ -642,24 +673,24 @@ const ProductDetail = () => {
                       </>
                     ) : (
                       <>
-                        <div className="flex items-baseline gap-3 mb-2">
-                          <div>
-                            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
-                              {formatFC(product.price_min || 0)}
-                            </span>
-                            <span className="text-xl text-slate-500 dark:text-slate-400 mx-2">-</span>
-                            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
-                              {formatFC(product.price_max || 0)}
-                            </span>
-                            <span className="text-2xl text-slate-500 dark:text-slate-400 ml-2">FC</span>
-                          </div>
+                        {/* Prix négociable */}
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
+                            {formatFC(product.price_min || 0)}
+                          </span>
+                          <span className="text-lg text-gray-500 dark:text-gray-400 mx-1">-</span>
+                          <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
+                            {formatFC(product.price_max || 0)}
+                          </span>
+                          <span className="text-xl text-gray-500 dark:text-gray-400 font-semibold ml-1">FC</span>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded-md text-xs font-semibold">
+                            <Hand className="w-3.5 h-3.5" />
                             Prix négociable
                           </span>
-                          <span className="text-base text-slate-600 dark:text-slate-300">
-                            ≈ {formatADA(convertFCToADA(((product.price_min || 0) + (product.price_max || 0)) / 2))} ADA (moyenne)
+                          <span className="text-xs text-gray-600 dark:text-gray-300">
+                            Moyenne: ≈ {formatADA(convertFCToADA(((product.price_min || 0) + (product.price_max || 0)) / 2))} ADA
                           </span>
                         </div>
                       </>
@@ -669,13 +700,13 @@ const ProductDetail = () => {
                     {product.category === 'service' && (
                       <div className="mt-3">
                         {product.is_available !== false ? (
-                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
-                            <CheckCircle className="w-4 h-4" />
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg text-xs font-semibold">
+                            <CheckCircle className="w-3.5 h-3.5" />
                             Disponible
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium">
-                            <X className="w-4 h-4" />
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg text-xs font-semibold">
+                            <X className="w-3.5 h-3.5" />
                             Indisponible
                           </span>
                         )}
@@ -686,18 +717,18 @@ const ProductDetail = () => {
               })()}
             </div>
             
-            {/* Size info for fashion */}
+            {/* Size info for fashion - Compact */}
             {product.category === 'fashion' && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                 {product.fashion_type === 'habit' && product.size && (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <span className="text-slate-500">Taille:</span>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-700 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-500 dark:text-gray-400">Taille:</span>
                     <span className="font-bold text-primary">{product.size}</span>
                   </span>
                 )}
                 {product.fashion_type === 'soulier' && product.shoe_number && (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <span className="text-slate-500">Numéro:</span>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-700 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-500 dark:text-gray-400">Numéro:</span>
                     <span className="font-bold text-primary">{product.shoe_number}</span>
                   </span>
                 )}
@@ -705,42 +736,48 @@ const ProductDetail = () => {
             )}
           </div>
 
-          {/* Seller Card - Enhanced */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Vendeur</div>
+          {/* Seller Card - Enhanced & Attractive */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 font-semibold">Vendeur</div>
             
             <Link 
               to={`/seller/${product.seller_id}`}
-              className="flex items-center gap-4 group mb-4"
+              className="flex items-center gap-3 group mb-4"
             >
               {product.profiles?.avatar_url ? (
-                <img 
-                  src={product.profiles.avatar_url} 
-                  alt={product.profiles.full_name}
-                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-200 dark:ring-slate-700 group-hover:ring-primary transition"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-2xl font-bold">
-                  {product.profiles?.full_name?.charAt(0) || 'V'}
-                </div>
-              )}
-              
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary transition">
-                    {product.profiles?.full_name || 'Vendeur'}
-                  </p>
+                <div className="relative">
+                  <img 
+                    src={product.profiles.avatar_url} 
+                    alt={product.profiles.full_name}
+                    className="w-14 h-14 rounded-xl object-cover ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-primary transition"
+                  />
                   {product.profiles?.is_verified && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
-                      <CheckCircle className="w-3 h-3" />
-                      Vérifié
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5">
+                      <ShieldCheck className="w-3 h-3 text-white" />
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+              ) : (
+                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-xl font-bold">
+                  {product.profiles?.full_name?.charAt(0) || 'V'}
+                  {product.profiles?.is_verified && (
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5">
+                      <ShieldCheck className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-base font-bold text-gray-900 dark:text-white group-hover:text-primary transition truncate">
+                    {product.profiles?.full_name || 'Vendeur'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">
                       {product.profiles?.reputation_score?.toFixed(1) || '0.0'}
                     </span>
                   </span>
@@ -751,35 +788,35 @@ const ProductDetail = () => {
 
             <Link
               to={`/seller/${product.seller_id}`}
-              className="block w-full text-center py-3 border-2 border-primary text-primary font-semibold rounded-xl hover:bg-primary hover:text-white transition-colors"
+              className="block w-full text-center py-2.5 border-2 border-primary text-primary font-semibold rounded-xl hover:bg-primary hover:text-white transition-all text-sm"
             >
               Voir la boutique
             </Link>
           </div>
 
-          {/* Description */}
-          <div>
-            <h3 className="font-semibold text-dark mb-2">Description</h3>
-            <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+          {/* Description - Enhanced */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wide">Description</h3>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap text-sm">
               {product.description}
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="sticky bottom-4 sm:static bg-white sm:bg-transparent p-4 sm:p-0 -mx-4 sm:mx-0 border-t sm:border-0 border-gray-100">
+          {/* Action Buttons - Enhanced & Sticky */}
+          <div className="sticky bottom-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl p-5 -mx-4 sm:mx-0 sm:static sm:shadow-sm">
             {/* Boutons Modifier/Supprimer pour le propriétaire */}
             {user && user.id === product.seller_id && (
-              <div className="flex gap-3 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <Link
                   to={`/products/${product.id}/edit`}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium text-sm"
                 >
                   <Edit className="w-4 h-4" />
                   Modifier
                 </Link>
                 <button
                   onClick={handleDeleteClick}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition font-medium"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition font-medium text-sm"
                 >
                   <Trash2 className="w-4 h-4" />
                   Supprimer
@@ -793,86 +830,138 @@ const ProductDetail = () => {
                 <>
                   <button 
                     onClick={() => setShowContactModal(true)}
-                    className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-4 rounded-xl sm:rounded-2xl shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30 active:scale-[0.98] transition-all text-lg"
+                    className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 active:scale-[0.98] transition-all text-base"
                   >
                     <MessageCircle className="w-5 h-5" />
                     Contacter le vendeur
                   </button>
-                  <div className="flex items-center justify-center gap-2 mt-4 text-xs text-amber-600 bg-amber-50 py-2 rounded-xl">
+                  <div className="flex items-center justify-center gap-2 mt-3 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 py-2 px-3 rounded-lg border border-amber-200 dark:border-amber-800">
                     <Wrench className="w-3.5 h-3.5" />
                     <span>Contact direct - Pas d'escrow</span>
                   </div>
                 </>
               ) : (
-                // Catégories avec escrow - Boutons Acheter et Négocier
+                // Catégories avec escrow - Structure réorganisée
                 <>
-                  {/* Bouton Négocier */}
+                  {/* Bouton Négocier - En premier */}
                   <button 
                     onClick={handleStartNegotiation}
-                    className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary font-semibold py-4 rounded-xl sm:rounded-2xl hover:bg-primary/5 active:scale-[0.98] transition-all mb-4"
+                    className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border-2 border-primary text-primary font-semibold py-3 rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 active:scale-[0.98] transition-all mb-4"
                   >
-                    <MessageSquare className="w-5 h-5" />
+                    <Hand className="w-4 h-4" />
                     Négocier le prix
                   </button>
 
-                  {/* Méthodes de paiement */}
+                  {/* Section Acheter maintenant */}
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Méthode de paiement</p>
-                    
-                    {/* CTA Principal - Acheter */}
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      Acheter maintenant
+                    </div>
+
+                    {/* Payer avec ADA - Escrow sécurisé */}
                     <button 
                       onClick={handleBuy}
                       disabled={processing}
-                      className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-5 px-6 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-[0.98] transition-all disabled:opacity-50 text-lg"
+                      className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-primary via-blue-600 to-violet-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-white/20 rounded-lg">
+                          <ShoppingCart className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm">Payer avec ADA</span>
+                      </div>
                       {processing ? (
-                        <>
-                          <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                          </svg>
-                          <span>Traitement...</span>
-                        </>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
                       ) : (
-                        <>
-                          <ShoppingCart className="w-6 h-6" />
-                          <span>Acheter maintenant</span>
-                        </>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-md font-semibold border border-white/30">
+                            Escrow sécurisé
+                          </span>
+                          <Shield className="w-4 h-4" />
+                        </div>
                       )}
                     </button>
 
-                    {/* Option Mobile Money */}
+                    {/* Payer avec Mobile Money - Coming Soon, Pas d'escrow */}
                     <button 
                       onClick={() => setShowMobileMoneyModal(true)}
-                      className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl sm:rounded-2xl hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition cursor-pointer shadow-sm"
+                      className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-300 dark:border-green-700 text-gray-700 dark:text-gray-300 font-semibold py-3.5 px-4 rounded-xl hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-all active:scale-[0.98]"
                     >
                       <div className="flex items-center gap-3">
-                        <Smartphone className="w-5 h-5 text-green-600 dark:text-green-400" />
-                        <span>Payer avec Mobile Money</span>
+                        {/* Logos des réseaux Mobile Money */}
+                        <div className="flex items-center gap-1.5">
+                          {/* M-Pesa Logo */}
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm border border-gray-200">
+                            <img 
+                              src="/mobile-money/mpesa.png" 
+                              alt="M-Pesa"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          {/* Airtel Logo */}
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm border border-gray-200">
+                            <img 
+                              src="/mobile-money/airtel.png" 
+                              alt="Airtel"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          {/* Orange Logo */}
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm border border-gray-200">
+                            <img 
+                              src="/mobile-money/orange.png" 
+                              alt="Orange"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          {/* Africell Logo */}
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm border border-gray-200">
+                            <img 
+                              src="/mobile-money/africell.png" 
+                              alt="Africell"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-sm">Payer en Mobile Money</span>
                       </div>
-                      <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg font-medium flex items-center gap-1">
-                        <ClockIcon className="w-3 h-3" />
-                        Bientôt disponible
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-1 rounded-md font-semibold border border-amber-200 dark:border-amber-800">
+                          Coming Soon
+                        </span>
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      </div>
                     </button>
-                  </div>
 
-                  <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5" />
-                      Paiement sécurisé
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Escrow garanti
-                    </span>
+                    {/* Info Mobile Money - Pas d'escrow */}
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5">
+                      <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
+                        <Wrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                        <span>Mobile Money : Contact direct avec le vendeur - Pas d'escrow</span>
+                      </div>
+                    </div>
                   </div>
                 </>
               )
             ) : (
               <button 
                 disabled 
-                className="w-full py-4 bg-gray-200 text-gray-500 font-semibold rounded-xl sm:rounded-2xl cursor-not-allowed"
+                className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold rounded-xl cursor-not-allowed"
               >
                 Produit indisponible
               </button>
@@ -1292,101 +1381,110 @@ const ProductDetail = () => {
         </div>
       )}
 
-      {/* Toast Mobile Money - Opérateurs disponibles à Goma */}
+      {/* Modal Mobile Money - Style Wallet Modal */}
       {showMobileMoneyModal && (
-        <div className="fixed bottom-4 left-1/2 z-[100] animate-slide-up-toast">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 p-5 max-w-md w-[calc(100vw-2rem)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileMoneyModal(false)} />
+
+          <div className="relative w-full max-w-sm bg-gradient-to-b from-[#101827] to-[#0a0f18] rounded-2xl shadow-2xl border border-green-500/20 overflow-hidden animate-fade-in">
+            
+            {/* Glow effect */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-green-500/20 rounded-full blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl" />
+
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-green-600 dark:text-green-400" />
-                <h3 className="font-bold text-dark dark:text-white text-sm">Mobile Money - Bientôt disponible</h3>
+            <div className="relative flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-white text-sm">Mobile Money</h2>
+                  <p className="text-[10px] text-green-400">Coming Soon</p>
+                </div>
               </div>
-              <button 
-                onClick={() => setShowMobileMoneyModal(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-              >
-                <X className="w-4 h-4 text-gray-400" />
+              <button onClick={() => setShowMobileMoneyModal(false)} className="p-1.5 hover:bg-white/10 rounded-lg transition text-gray-500 hover:text-white">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Grille de carreaux - Opérateurs */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              {/* M-Pesa */}
-              <div className="relative group bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-green-400/30 aspect-square flex flex-col items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <div className="relative flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
-                    <svg viewBox="0 0 100 100" className="w-10 h-10">
-                      <rect x="20" y="25" width="15" height="45" rx="2" fill="white"/>
-                      <rect x="42" y="25" width="15" height="45" rx="2" fill="white"/>
-                      <path d="M 62 25 L 75 45 L 62 65 L 62 50 L 57 50 L 57 40 L 62 40 Z" fill="white"/>
-                      <circle cx="50" cy="75" r="3" fill="white"/>
-                    </svg>
+            {/* Content - Grille de logos uniquement */}
+            <div className="relative p-4">
+              {/* Mobile Money Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* M-Pesa */}
+                <div className="relative p-3 rounded-xl flex flex-col items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10 transition-all duration-200 cursor-not-allowed">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-white p-1.5">
+                    <img 
+                      src="/mobile-money/mpesa.png" 
+                      alt="M-Pesa"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  <p className="font-bold text-white text-xs text-center">M-Pesa</p>
-                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
-                    Bientôt
+                  <span className="text-[11px] text-white font-medium">M-Pesa</span>
+                  <span className="absolute top-2 right-2 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                    Soon
                   </span>
                 </div>
-              </div>
 
-              {/* Airtel Money */}
-              <div className="relative group bg-gradient-to-br from-red-500 via-red-600 to-rose-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-red-400/30 aspect-square flex flex-col items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <div className="relative flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
-                    <svg viewBox="0 0 100 100" className="w-10 h-10">
-                      <path d="M 30 70 L 50 30 L 70 70 L 62 70 L 50 45 L 38 70 Z" fill="white"/>
-                      <rect x="52" y="50" width="15" height="20" rx="2" fill="white"/>
-                    </svg>
+                {/* Airtel */}
+                <div className="relative p-3 rounded-xl flex flex-col items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 transition-all duration-200 cursor-not-allowed">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-white p-1.5">
+                    <img 
+                      src="/mobile-money/airtel.png" 
+                      alt="Airtel"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  <p className="font-bold text-white text-xs text-center">Airtel</p>
-                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
-                    Bientôt
+                  <span className="text-[11px] text-white font-medium">Airtel</span>
+                  <span className="absolute top-2 right-2 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                    Soon
                   </span>
                 </div>
-              </div>
 
-              {/* Orange Money */}
-              <div className="relative group bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-orange-400/30 aspect-square flex flex-col items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <div className="relative flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
-                    <svg viewBox="0 0 100 100" className="w-10 h-10">
-                      <circle cx="50" cy="50" r="25" fill="none" stroke="white" strokeWidth="6"/>
-                      <circle cx="50" cy="50" r="15" fill="white" opacity="0.3"/>
-                    </svg>
+                {/* Orange */}
+                <div className="relative p-3 rounded-xl flex flex-col items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10 transition-all duration-200 cursor-not-allowed">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-white p-1.5">
+                    <img 
+                      src="/mobile-money/orange.png" 
+                      alt="Orange"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  <p className="font-bold text-white text-xs text-center">Orange</p>
-                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
-                    Bientôt
+                  <span className="text-[11px] text-white font-medium">Orange</span>
+                  <span className="absolute top-2 right-2 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                    Soon
                   </span>
                 </div>
-              </div>
 
-              {/* Africell Money */}
-              <div className="relative group bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl p-4 cursor-not-allowed overflow-hidden shadow-lg border-2 border-blue-400/30 aspect-square flex flex-col items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <div className="relative flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-md">
-                    <svg viewBox="0 0 100 100" className="w-10 h-10">
-                      <path d="M 35 70 L 50 35 L 65 70 L 57 70 L 50 50 L 43 70 Z" fill="white"/>
-                      <circle cx="50" cy="60" r="3" fill="white"/>
-                    </svg>
+                {/* Africell */}
+                <div className="relative p-3 rounded-xl flex flex-col items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-not-allowed">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-white p-1.5">
+                    <img 
+                      src="/mobile-money/africell.png" 
+                      alt="Africell"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  <p className="font-bold text-white text-xs text-center">Africell</p>
-                  <span className="absolute top-2 right-2 text-[10px] bg-amber-400/90 text-white px-2 py-0.5 rounded-full font-semibold">
-                    Bientôt
+                  <span className="text-[11px] text-white font-medium">Africell</span>
+                  <span className="absolute top-2 right-2 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                    Soon
                   </span>
                 </div>
               </div>
             </div>
-
-            {/* Message info */}
-            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
-              Disponible prochainement à Goma
-            </p>
           </div>
         </div>
       )}

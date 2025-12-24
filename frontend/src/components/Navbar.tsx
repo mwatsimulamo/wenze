@@ -154,6 +154,18 @@ const Navbar = () => {
     }
   }, [user, fetchProfile, fetchNotificationCount]);
 
+  // Écouter l'événement pour ouvrir automatiquement le modal wallet
+  useEffect(() => {
+    const handleOpenWalletModal = () => {
+      setIsWalletModalOpen(true);
+    };
+
+    window.addEventListener('open-wallet-modal', handleOpenWalletModal);
+    return () => {
+      window.removeEventListener('open-wallet-modal', handleOpenWalletModal);
+    };
+  }, []);
+
   // Fermer le menu mobile en cliquant en dehors
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -363,7 +375,7 @@ const Navbar = () => {
                           {connectedWallet.balance.toLocaleString("fr-FR", {
                             maximumFractionDigits: 2,
                           })}{" "}
-                          ₳
+                          <span className="text-xs">t₳</span>
                         </span>
                         <ChevronDown
                           className={`w-3 h-3 transition-transform ${
@@ -388,7 +400,7 @@ const Navbar = () => {
                                   "fr-FR",
                                   { maximumFractionDigits: 4 }
                                 )}{" "}
-                                ADA
+                                t₳
                               </span>
                             </div>
                             <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2">
@@ -711,7 +723,7 @@ const Navbar = () => {
                             {connectedWallet.balance.toLocaleString("fr-FR", {
                               maximumFractionDigits: 2,
                             })}{" "}
-                            ₳
+                            <span className="text-sm">t₳</span>
                           </span>
                         </div>
                         <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-2.5 mb-3">
