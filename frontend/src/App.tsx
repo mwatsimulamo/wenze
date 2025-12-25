@@ -21,7 +21,10 @@ const SellerProfile = lazy(() => import('./pages/SellerProfile'));
 const Orders = lazy(() => import('./pages/Orders'));
 const OrderDetail = lazy(() => import('./pages/OrderDetail'));
 const AdminProducts = lazy(() => import('./pages/AdminProducts'));
+const AdminRewards = lazy(() => import('./pages/AdminRewards'));
 const EditProduct = lazy(() => import('./pages/EditProduct'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const RewardsClaim = lazy(() => import('./pages/RewardsClaim'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -90,6 +93,12 @@ function App() {
                         <Route path="/products" element={<Products />} />
                         <Route path="/products/:id" element={<ProductDetail />} />
                         <Route path="/seller/:id" element={<SellerProfile />} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
+                        <Route path="/rewards/claim" element={
+                          <ProtectedRoute>
+                            <RewardsClaim />
+                          </ProtectedRoute>
+                        } />
                         <Route path="/products/new" element={
                           <ProtectedRoute>
                             <CreateProduct />
@@ -125,6 +134,11 @@ function App() {
                         <Route path="/admin/products" element={
                           <ProtectedRoute>
                             <AdminProducts />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/admin/rewards" element={
+                          <ProtectedRoute>
+                            <AdminRewards />
                           </ProtectedRoute>
                         } />
                       </Routes>

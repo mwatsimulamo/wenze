@@ -26,6 +26,7 @@ import {
   MessageCircle,
   ExternalLink,
   Lightbulb,
+  Trophy,
 } from "lucide-react";
 import WalletModal, { WalletData } from "./WalletModal";
 import ExchangeOperators from "./ExchangeOperators";
@@ -275,6 +276,13 @@ const Navbar = () => {
                 className="font-medium hover:text-accent transition"
               >
                 {t("nav.market")}
+              </Link>
+              <Link
+                to="/leaderboard"
+                className="font-medium hover:text-accent transition flex items-center gap-1"
+              >
+                <Trophy className="w-4 h-4" />
+                WZP
               </Link>
               {user && (
                 <Link
@@ -644,6 +652,14 @@ const Navbar = () => {
                 >
                   <Package size={22} className="text-primary" />
                   <span>{t("nav.market")}</span>
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 font-medium text-base transition"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Trophy size={22} className="text-primary" />
+                  <span>WZP</span>
                 </Link>
               </div>
 

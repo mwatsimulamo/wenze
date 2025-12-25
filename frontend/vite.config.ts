@@ -87,6 +87,13 @@ export default defineConfig({
     },
     hmr: {
       overlay: true, // Garder l'overlay pour les erreurs
+      // Désactiver l'erreur WebSocket dans la console (non critique)
+      clientPort: 5173, // Port explicite pour le client WebSocket
+    },
+    // Configuration du WebSocket pour éviter les erreurs répétées
+    ws: {
+      // Ne pas afficher d'erreur si la connexion WebSocket échoue (HMR peut continuer sans)
+      reconnect: true,
     },
   },
   assetsInclude: ['**/*.wasm'], // Inclure les fichiers WASM comme assets

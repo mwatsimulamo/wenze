@@ -85,6 +85,19 @@ export const lockFundsInEscrow = async (
 ): Promise<{ txHash: string; escrowAddress: string; escrowUtxo: UTxO }> => {
   const lucid = lucidInstance || getLucid();
   const amountLovelace = adaToLovelace(amountAda);
+  
+  // Vérifier que Lucid a un wallet sélectionné
+  try {
+    const currentAddress = await lucid.wallet.address();
+    if (!currentAddress || currentAddress !== buyerAddress) {
+      console.warn('⚠️ L\'adresse du wallet dans Lucid ne correspond pas à l\'adresse de l\'acheteur');
+      console.warn(`   Lucid wallet: ${currentAddress?.substring(0, 20)}...`);
+      console.warn(`   Buyer address: ${buyerAddress.substring(0, 20)}...`);
+    }
+  } catch (walletCheckError: any) {
+    console.error('❌ Erreur lors de la vérification du wallet dans Lucid:', walletCheckError);
+    throw new Error(`Wallet non disponible dans Lucid: ${walletCheckError?.message || 'Veuillez reconnecter votre wallet'}`);
+  }
 
   // Calculer l'adresse du script escrow depuis le validateur V2 minimal
   const escrowAddress = await getEscrowAddress(lucid);
@@ -111,6 +124,21 @@ export const lockFundsInEscrow = async (
   // Les VerificationKeyHash sont déjà en hex, on peut les utiliser directement
   // Mais Data.to() attend des chaînes pour les bytes, donc on les garde en hex
   
+  // Convertir le deadline en secondes (Plutus utilise des secondes, pas des millisecondes)
+  // Si le deadline est passé en millisecondes, le convertir
+  const deadlineSeconds = deadline > 1000000000000 
+    ? Math.floor(deadline / 1000)  // Si > 1000000000000, c'est probablement en millisecondes
+    : deadline;
+  
+  // Vérifier que les valeurs sont valides
+  if (!buyerVKeyHash || !sellerVKeyHash) {
+    throw new Error('Les clés de vérification de l\'acheteur et du vendeur sont requises');
+  }
+  
+  if (amountLovelace <= 0n) {
+    throw new Error(`Le montant doit être supérieur à 0. Montant reçu: ${amountLovelace.toString()} lovelace`);
+  }
+  
   // Créer le datum structuré selon l'interface EscrowDatum
   // Format PlutusData: Constr avec les champs dans l'ordre
   // IMPORTANT: Pour les ByteArray dans PlutusData avec Lucid, utiliser des chaînes hex
@@ -119,27 +147,103 @@ export const lockFundsInEscrow = async (
     buyerVKeyHash, // buyer: VerificationKeyHash (comme hex string)
     sellerVKeyHash, // seller: VerificationKeyHash (comme hex string)
     BigInt(amountLovelace), // amount: Int (en lovelace)
-    BigInt(deadline), // deadline: Int (timestamp en millisecondes)
+    BigInt(deadlineSeconds), // deadline: Int (timestamp en secondes)
   ]);
   
-  const datum = Data.to(escrowDatum);
-  console.log('✅ Datum EscrowDatum créé avec:', {
+  console.log('🔒 Datum créé avec les valeurs:', {
     orderId,
-    buyer: buyerVKeyHash.substring(0, 16) + '...',
-    seller: sellerVKeyHash.substring(0, 16) + '...',
-    amount: amountLovelace.toString(),
-    deadline: new Date(deadline).toISOString(),
+    orderIdHex: orderIdHex.substring(0, 20) + '...',
+    buyerVKeyHash: buyerVKeyHash.substring(0, 16) + '...',
+    sellerVKeyHash: sellerVKeyHash.substring(0, 16) + '...',
+    amountLovelace: amountLovelace.toString(),
+    deadlineMs: deadline,
+    deadlineSeconds,
+    deadlineDate: new Date(deadlineSeconds * 1000).toISOString(),
   });
   
-  console.log('📝 Construction de la transaction avec datum inline (chaîne vide)...');
-  const tx = await lucid
-    .newTx()
-    .payToContract(escrowAddress, { inline: datum }, { lovelace: amountLovelace })
-    .complete();
+  // Sérialiser le datum en PlutusData
+  let datum: string;
+  try {
+    datum = Data.to(escrowDatum);
+    
+    // Vérifier que le datum n'est pas vide
+    if (!datum || datum.trim() === '') {
+      throw new Error('Le datum est vide après sérialisation');
+    }
+    
+    console.log('✅ Datum EscrowDatum créé avec:', {
+      orderId,
+      buyer: buyerVKeyHash.substring(0, 16) + '...',
+      seller: sellerVKeyHash.substring(0, 16) + '...',
+      amount: amountLovelace.toString(),
+      deadline: new Date(deadline).toISOString(),
+      datumLength: datum.length,
+      datumPreview: datum.substring(0, 50) + '...'
+    });
+  } catch (datumError: any) {
+    console.error('❌ Erreur lors de la création du datum:', datumError);
+    throw new Error(`Impossible de créer le datum: ${datumError?.message || 'Erreur inconnue'}`);
+  }
+  
+  // Vérifier que le wallet est bien connecté avant de construire la transaction
+  try {
+    const walletAddress = await lucid.wallet.address();
+    if (!walletAddress) {
+      throw new Error('Wallet non connecté ou adresse non disponible');
+    }
+    console.log('✅ Wallet vérifié:', walletAddress.substring(0, 20) + '...');
+  } catch (walletError: any) {
+    console.error('❌ Erreur de vérification du wallet:', walletError);
+    throw new Error(`Wallet non disponible: ${walletError?.message || 'Veuillez reconnecter votre wallet'}`);
+  }
+  
+  // Vérifier que l'amount est valide
+  if (amountLovelace <= 0n) {
+    throw new Error(`Montant invalide: ${amountLovelace.toString()} lovelace`);
+  }
+  
+  console.log('📝 Construction de la transaction avec datum inline...');
+  
+  let tx;
+  try {
+    tx = await lucid
+      .newTx()
+      .payToContract(escrowAddress, { inline: datum }, { lovelace: amountLovelace })
+      .complete();
+    console.log('✅ Transaction construite avec succès');
+  } catch (txError: any) {
+    console.error('❌ Erreur lors de la construction de la transaction:', txError);
+    console.error('📋 Détails:', txError?.message || txError);
+    throw new Error(`Erreur lors de la construction de la transaction: ${txError?.message || 'Erreur inconnue'}`);
+  }
   
   console.log('✅ Transaction construite, signature...');
-  const signedTx = await tx.sign().complete();
-  const txHash = await signedTx.submit();
+  let signedTx;
+  try {
+    signedTx = await tx.sign().complete();
+    console.log('✅ Transaction signée avec succès');
+  } catch (signError: any) {
+    console.error('❌ Erreur lors de la signature de la transaction:', signError);
+    console.error('📋 Détails:', signError?.message || signError);
+    
+    // Messages d'erreur plus spécifiques
+    if (signError?.message?.includes('User declined') || signError?.message?.includes('User canceled')) {
+      throw new Error('Transaction annulée. Vous avez refusé de signer la transaction dans votre wallet.');
+    } else if (signError?.message?.includes('insufficient') || signError?.message?.includes('balance')) {
+      throw new Error('Solde insuffisant. Vérifiez que vous avez assez d\'ADA pour couvrir le montant et les frais.');
+    } else {
+      throw new Error(`Erreur de signature: ${signError?.message || 'Le wallet n\'a pas pu signer la transaction. Vérifiez que votre wallet est déverrouillé.'}`);
+    }
+  }
+  
+  let txHash: string;
+  try {
+    txHash = await signedTx.submit();
+    console.log('✅ Transaction soumise:', txHash);
+  } catch (submitError: any) {
+    console.error('❌ Erreur lors de la soumission de la transaction:', submitError);
+    throw new Error(`Erreur lors de la soumission: ${submitError?.message || 'La transaction n\'a pas pu être envoyée à la blockchain'}`);
+  }
   console.log('✅ Transaction soumise:', txHash);
   
   // Attendre que la transaction soit confirmée

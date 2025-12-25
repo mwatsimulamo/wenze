@@ -1,6 +1,6 @@
 /**
  * Distribution automatique des WZP (Wenze Points) après une transaction ADA réussie
- * Règle : 1 ADA = 0.5 WZP
+ * Règle : 1 ADA = 0.25 WZP
  * Les WZP sont distribués à l'acheteur et au vendeur après une transaction réussie
  */
 
@@ -28,8 +28,8 @@ export const distributeWZPAfterTransaction = async (
   amountAda: number
 ): Promise<WZPDistributionResult> => {
   try {
-    // Calculer le montant de WZP : 1 ADA = 0.5 WZP
-    const wzpAmount = parseFloat((amountAda * 0.5).toFixed(2));
+    // Calculer le montant de WZP : 1 ADA = 0.25 WZP
+    const wzpAmount = parseFloat((amountAda * 0.25).toFixed(2));
 
     console.log(`💎 Distribution WZP : ${amountAda} ADA = ${wzpAmount} WZP pour chaque partie`);
 
