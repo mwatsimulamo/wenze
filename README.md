@@ -331,4 +331,4 @@ Ce projet est propriétaire. Tous droits réservés.
 
 *WENZE - L'avenir du commerce sécurisé en RDC*
 
-</div>
+</div> .
