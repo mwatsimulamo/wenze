@@ -25,7 +25,7 @@
 - **Statistiques en Temps Réel** : Données réelles depuis la base de données
 - **Interface Moderne** : Design fluide et intuitif optimisé pour mobile
 
-## 🏗 Architecture
+## Architecture
 
 ### Frontend
 - **Framework** : React 18 + TypeScript
