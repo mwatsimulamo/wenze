@@ -15,15 +15,15 @@
 
 ---
 
-## 🌟 Caractéristiques Principales
+## Caractéristiques Principales
 
-- 🔐 **Escrow Blockchain Cardano** : Les fonds sont verrouillés dans un smart contract jusqu'à confirmation de réception
-- 💰 **Paiements en ADA** : Transactions sécurisées sur la blockchain Cardano (Preprod Testnet)
-- 🎯 **Système de Points WZP** : Récompenses pour chaque transaction réussie
-- 💬 **Négociation de Prix** : Système de chat intégré avec propositions de prix
-- 🌍 **Multi-langue** : Support Français et Swahili
-- 📊 **Statistiques en Temps Réel** : Données réelles depuis la base de données
-- 🎨 **Interface Moderne** : Design fluide et intuitif optimisé pour mobile
+- **Escrow Blockchain Cardano** : Les fonds sont verrouillés dans un smart contract jusqu'à confirmation de réception
+- **Paiements en ADA** : Transactions sécurisées sur la blockchain Cardano (Preprod Testnet)
+- **Système de Points WZP** : Récompenses pour chaque transaction réussie
+- **Négociation de Prix** : Système de chat intégré avec propositions de prix
+- **Multi-langue** : Support Français et Swahili
+- **Statistiques en Temps Réel** : Données réelles depuis la base de données
+- **Interface Moderne** : Design fluide et intuitif optimisé pour mobile
 
 ## 🏗 Architecture
 
@@ -41,7 +41,7 @@
 - **API** : Supabase REST API + Node.js/Express (pour logiques complexes)
 - **Blockchain Provider** : Blockfrost API (Preprod Testnet)
 
-## 🚀 Installation & Démarrage
+## Installation & Démarrage
 
 ### Pré-requis
 
@@ -116,7 +116,7 @@ npm install
 npm start
 ```
 
-## 📱 Fonctionnalités
+## Fonctionnalités
 
 ### Authentification
 - Inscription/Connexion avec email et mot de passe
@@ -150,7 +150,7 @@ npm start
 - Statut de lecture (simple = envoyé, double = lu)
 - Présence en ligne (indicateur online/offline)
 
-## 📂 Structure du Projet
+## Structure du Projet
 
 ```
 wenze/
@@ -227,7 +227,7 @@ aiken build
 
 Le contrat compilé sera disponible dans `frontend/public/contracts/`.
 
-## 🌐 Déploiement
+## Déploiement
 
 ### Vercel (Recommandé)
 
@@ -251,9 +251,9 @@ Les migrations SQL sont disponibles dans `supabase/migrations/`. Exécutez-les d
 4. `create_wzp_leaderboard.sql` - Tableau des leaders
 5. Autres migrations selon vos besoins
 
-## ⚠️ État Actuel & Limitations
+## État Actuel & Limitations
 
-### ✅ Fonctionnel
+### Fonctionnel
 - Authentification complète (Email/Password, Google OAuth)
 - Gestion des produits (publication, édition, suppression)
 - Types de prix (fixe ou négociable avec plage min-max)
@@ -266,19 +266,19 @@ Les migrations SQL sont disponibles dans `supabase/migrations/`. Exécutez-les d
 - Statistiques en temps réel
 - Interface moderne et responsive
 
-### 🚧 En Développement
+### En Développement
 - Support complet Plutus V3 (actuellement limitation avec lucid-cardano 0.10.11)
 - Annulation automatique après délai
 - Optimisations de performance
 - Tests automatisés
 
-### 📝 Notes Techniques
+### Notes Techniques
 
 - **Réseau** : Actuellement sur **Preprod Testnet** (Cardano)
 - **Lucid Version** : 0.10.11 (limitations connues avec Plutus V3)
 - **Smart Contract** : Script de test Plutus V2 utilisé en fallback
 
-## 🔧 Configuration Avancée
+## Configuration Avancée
 
 ### Edge Functions Supabase
 
@@ -296,7 +296,7 @@ Pour créer un compte administrateur et gérer les récompenses WZP :
 2. Mettez à jour un profil avec `is_admin = true` dans Supabase
 3. Accédez à `/admin/rewards` pour gérer les récompenses
 
-## 🤝 Contribution
+## Contribution
 
 Les contributions sont les bienvenues ! Voici comment contribuer :
 
@@ -313,11 +313,11 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 - Testez vos modifications
 - Mettez à jour la documentation si nécessaire
 
-## 📄 Licence
+## Licence
 
 Ce projet est propriétaire. Tous droits réservés.
 
-## 🙏 Remerciements
+## Remerciements
 
 - [Cardano](https://cardano.org/) - Pour la blockchain
 - [Supabase](https://supabase.com/) - Pour l'infrastructure backend
