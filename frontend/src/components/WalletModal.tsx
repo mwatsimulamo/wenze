@@ -9,6 +9,7 @@ const CARDANO_WALLETS = [
   { id: 'flint', name: 'Flint', icon: '/wallets/flint.png', url: 'https://flint-wallet.com' },
   { id: 'nami', name: 'Nami', icon: '/wallets/nami.png', url: 'https://namiwallet.io' },
   { id: 'vespr', name: 'Vespr', icon: '/wallets/vespr.png', url: 'https://vespr.xyz' },
+  { id: '1am', name: '1AM', icon: '/wallets/1am.png', url: 'https://1am.xyz' },
 ];
 
 // Cardano Logo
