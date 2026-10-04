@@ -247,7 +247,7 @@ const ProductDetail = () => {
           const installedWallets = await BrowserWallet.getInstalledWallets();
           const target = installedWallets.find((w: any) => w.name.toLowerCase() === walletId.toLowerCase());
           if (target) {
-            walletApi = await BrowserWallet.enable(target.name);
+            walletApi = await BrowserWallet.enable(walletId);
           } else {
             console.warn('⚠️ Wallet Mesh introuvable pour id:', walletId, ' - tentative avec Nami par défaut');
             walletApi = await BrowserWallet.enable('nami');

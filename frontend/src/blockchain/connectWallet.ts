@@ -11,7 +11,7 @@ declare global {
 /**
  * Liste des wallets supportés à vérifier (Ordre de priorité)
  */
-const SUPPORTED_WALLETS = ['nami', 'eternl', 'flint', 'vespr', 'lace', 'yoroi'];
+const SUPPORTED_WALLETS = ['nami', 'eternl', 'flint', 'vespr', 'lace', 'yoroi', '1am'];
 
 /**
  * Connecte l'utilisateur à son portefeuille Cardano via l'extension navigateur.

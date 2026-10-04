@@ -46,6 +46,7 @@ export const SUPPORTED_WALLETS = [
   { id: 'flint', name: 'Flint', icon: '/wallets/flint.png', url: 'https://flint-wallet.com' },
   { id: 'vespr', name: 'Vespr', icon: '/wallets/vespr.png', url: 'https://vespr.xyz' },
   { id: 'yoroi', name: 'Yoroi', icon: '/wallets/yoroi.png', url: 'https://yoroi-wallet.com' },
+  { id: '1am', name: '1AM', icon: '/wallets/1am.png', url: 'https://1am.xyz' },
 ] as const;
 
 /**
